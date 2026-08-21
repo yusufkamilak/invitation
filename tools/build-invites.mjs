@@ -93,34 +93,18 @@ function deletePath(obj, path) {
 }
 
 // keys removed from content/{lang}.json depending on which event(s) a guest
-// is invited to. "b" (both) only loses the unused single-event hero/intro
+// is invited to. "b" (both) only loses the unused single-event lead
 // variants — everything else stays since a both-guest sees both parts.
 const CONTENT_PRUNE = {
-  s: [
-    "denmark", "denmarkDay", "denmarkTravel",
-    "intro.denmark", "intro.titleDenmark", "intro.titleBoth",
-    "hero.eyebrowDenmark", "hero.eyebrowBoth", "hero.leadDenmark", "hero.leadBoth",
-    "nav.denmark", "nav.denmarkDay", "nav.denmarkTravel",
-    "faq.denmark",
-  ],
-  d: [
-    "where", "when", "how", "around", "bring", "notes",
-    "intro.spain", "intro.titleSpain", "intro.titleBoth",
-    "hero.eyebrowSpain", "hero.eyebrowBoth", "hero.leadSpain", "hero.leadBoth",
-    "nav.where", "nav.when", "nav.how", "nav.around", "nav.bring", "nav.notes",
-    "faq.spain",
-  ],
-  b: [
-    "hero.eyebrowSpain", "hero.eyebrowDenmark",
-    "hero.leadSpain", "hero.leadDenmark",
-    "intro.titleSpain", "intro.titleDenmark",
-  ],
+  s: ["denmark", "card.leadDenmark", "card.leadBoth", "faq.denmark"],
+  d: ["place", "plan", "practical", "card.leadSpain", "card.leadBoth", "faq.spain"],
+  b: ["card.leadSpain", "card.leadDenmark"],
 };
 
 // keys removed from content/details.json the same way.
 const DETAILS_PRUNE = {
   s: ["denmark", "photos.denmark"],
-  d: ["spain", "airbnb", "paypal", "photos.spain", "photos.house"],
+  d: ["spain", "airbnb", "paypal", "photos.place"],
   b: [],
 };
 

@@ -1,7 +1,11 @@
 /*
  * main.js — scroll reveals, the countdown, the FAQ accordion, and the two
- * forms (RSVP + Questions). Everything here is wired up once by
- * WeddingMain.start(bundle), called from render.js after the first paint.
+ * forms (RSVP + Questions).
+ *
+ * start(bundle) is called by js/envelope.js the moment the guest opens the
+ * envelope, not by render.js when the page is first painted. Everything in
+ * here is entrance behaviour, and firing it while the page was still hidden
+ * behind the envelope would spend it on an audience of nobody.
  */
 window.WeddingMain = (function () {
   "use strict";
@@ -9,13 +13,12 @@ window.WeddingMain = (function () {
   var bundle = null;
 
   // ---------------------------------------------------------------
-  // Scroll reveal — sections fade/rise in; repeated list items (story
-  // cards, plan steps, FAQ rows, ...) stagger via CSS nth-child delays
-  // once their parent section picks up .is-visible, so no per-item JS
-  // bookkeeping is needed here.
+  // Scroll reveal — sections fade/rise in; repeated list items (plan
+  // steps, FAQ rows, ...) stagger off the --i index the renderers set on
+  // each one, once their parent section picks up .is-visible.
   // ---------------------------------------------------------------
   function initReveal() {
-    var sections = document.querySelectorAll(".section:not(.hero)");
+    var sections = document.querySelectorAll(".section:not(.card)");
     if (!("IntersectionObserver" in window)) {
       sections.forEach(function (s) { s.classList.add("is-visible"); });
       return;
@@ -35,31 +38,19 @@ window.WeddingMain = (function () {
   }
 
   // ---------------------------------------------------------------
-  // Hero entrance — plays once, right after the page unlocks
+  // Card entrance — plays once, as the envelope clears
   // ---------------------------------------------------------------
-  function initHeroEntrance() {
+  function initCardEntrance() {
     requestAnimationFrame(function () {
-      document.getElementById("hero").classList.add("is-ready");
+      document.getElementById("card").classList.add("is-ready");
     });
-  }
-
-  // ---------------------------------------------------------------
-  // Nav — subtle stronger border/backdrop once the page has scrolled
-  // ---------------------------------------------------------------
-  function initNavScroll() {
-    var nav = document.getElementById("site-nav");
-    function tick() {
-      nav.classList.toggle("is-scrolled", window.scrollY > 40);
-    }
-    tick();
-    window.addEventListener("scroll", tick, { passive: true });
   }
 
   // ---------------------------------------------------------------
   // Countdown — to the Denmark date for a Denmark-only guest, to Spain
   // arrival otherwise. Hidden entirely when there's no date to count to
-  // yet (e.g. Denmark's date is still TBC), and counts up from 0 the
-  // first time it scrolls into view rather than snapping to the value.
+  // yet (Denmark's date is still TBC), and counts up from 0 the first
+  // time it scrolls into view rather than snapping to the value.
   // ---------------------------------------------------------------
   var countdownTimer = null;
   function initCountdown() {
@@ -241,8 +232,7 @@ window.WeddingMain = (function () {
 
   function start(b) {
     bundle = b;
-    initHeroEntrance();
-    initNavScroll();
+    initCardEntrance();
     initReveal();
     initCountdown();
     bindFaq();

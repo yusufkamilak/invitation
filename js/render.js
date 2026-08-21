@@ -7,7 +7,7 @@
  *
  * Event scoping: tools/build-invites.mjs prunes each guest's bundle to only
  * the part(s) they're invited to *before* it's ever encrypted — a Denmark-
- * only guest's decrypted bundle simply has no `content.*.where/when/how/...`
+ * only guest's decrypted bundle simply has no `content.*.place/plan/practical`
  * keys and no `details.spain/airbnb/paypal`. applyEventScope() below trusts
  * that pruning completely: it removes a section from the DOM whenever the
  * content it would need isn't present, rather than keeping a second,
@@ -63,13 +63,12 @@ window.WeddingRender = (function () {
       partnerA: d.couple.partnerA,
       partnerB: d.couple.partnerB,
       denmarkCity: hasDenmark ? d.denmark.city : "",
-      denmarkDate: hasDenmark ? (d.denmark.date ? fmtDate(d.denmark.date, lang) : c.denmark.tbcLabel) : "",
+      denmarkDate: hasDenmark ? (d.denmark.date ? fmtDate(d.denmark.date, lang) : c.card.tbc) : "",
       spainCity: hasSpain ? d.spain.city : "",
       checkin: hasSpain ? fmtDate(d.spain.checkin, lang) : "",
       checkout: hasSpain ? fmtDate(d.spain.checkout, lang) : "",
       nights: nights != null ? nights : "",
       cost: hasSpain ? fmtCost(d.spain.costPerPerson, d.spain.currency, lang) : "",
-      monogram: (d.couple.partnerA || "").charAt(0) + " & " + (d.couple.partnerB || "").charAt(0),
     };
   }
 
@@ -77,122 +76,115 @@ window.WeddingRender = (function () {
     if (el) el.textContent = value;
   }
 
+  function lookup(c, path) {
+    return path.split(".").reduce(function (o, k) { return o && o[k]; }, c);
+  }
+
+  // bindPass walks the whole document, not just #app: the envelope's
+  // "tap to open" hint lives outside it and still needs translating.
   function bindPass(root, ctx, c) {
     // data-bind="a.b.c" -> textContent from content[lang], template-substituted
     root.querySelectorAll("[data-bind]").forEach(function (el) {
-      var path = el.getAttribute("data-bind");
-      var val = path.split(".").reduce(function (o, k) { return o && o[k]; }, c);
-      setText(el, t(val || "", ctx));
+      setText(el, t(lookup(c, el.getAttribute("data-bind")) || "", ctx));
     });
     // data-bind-text="a.b.c" -> same, for elements whose textContent alone should update
     root.querySelectorAll("[data-bind-text]").forEach(function (el) {
-      var path = el.getAttribute("data-bind-text");
-      var val = path.split(".").reduce(function (o, k) { return o && o[k]; }, c);
-      setText(el, t(val || "", ctx));
+      setText(el, t(lookup(c, el.getAttribute("data-bind-text")) || "", ctx));
     });
     // data-bind-attr-placeholder="a.b.c" -> placeholder attribute
     root.querySelectorAll("[data-bind-attr-placeholder]").forEach(function (el) {
-      var path = el.getAttribute("data-bind-attr-placeholder");
-      var val = path.split(".").reduce(function (o, k) { return o && o[k]; }, c);
-      el.setAttribute("placeholder", t(val || "", ctx));
-    });
-    // data-i18n="a.b.c" -> textContent from content[lang] (no templating, static UI strings)
-    root.querySelectorAll("[data-i18n]").forEach(function (el) {
-      var path = el.getAttribute("data-i18n");
-      var val = path.split(".").reduce(function (o, k) { return o && o[k]; }, c);
-      if (val) setText(el, val);
+      el.setAttribute("placeholder", t(lookup(c, el.getAttribute("data-bind-attr-placeholder")) || "", ctx));
     });
   }
 
-  function renderIntro(ctx, c) {
-    var kicker = document.querySelector('[data-bind="intro.title"]');
-    var titleKey = bundle.guest.event === "b" ? "titleBoth" : bundle.guest.event === "s" ? "titleSpain" : "titleDenmark";
-    setText(kicker, t(c.intro[titleKey], ctx));
+  // ---- the card ----
 
-    var grid = document.getElementById("story-grid");
-    grid.innerHTML = "";
-    ["denmark", "spain"].forEach(function (key) {
-      var card = c.intro[key];
-      if (!card) return;
-      var div = document.createElement("div");
-      div.className = "story-card";
-      var h3 = document.createElement("h3");
-      h3.textContent = t(card.title, ctx);
-      var p = document.createElement("p");
-      p.textContent = t(card.body, ctx);
-      div.appendChild(h3);
-      div.appendChild(p);
-      grid.appendChild(div);
-    });
-  }
-
-  function renderWhere(ctx, c) {
-    if (!c.where) return;
-    var d = bundle.details;
-    setText(document.querySelector('[data-bind="where.name"]'), d.airbnb.name || c.where.nameTBD);
-    setText(document.querySelector('[data-bind="where.address"]'), d.airbnb.address || c.where.addressTBD);
-
-    var list = document.getElementById("where-amenities");
-    list.innerHTML = "";
-    (c.where.amenities || []).forEach(function (a) {
-      var li = document.createElement("li");
-      li.textContent = a;
-      list.appendChild(li);
-    });
-
-    var listingBtn = document.getElementById("where-listing");
-    listingBtn.href = d.airbnb.listingUrl;
-    var mapBtn = document.getElementById("where-map");
-    mapBtn.href = d.airbnb.mapUrl;
-  }
-
-  function renderWhen(ctx, c) {
-    if (!c.when) return;
-    var el = document.getElementById("when-dates");
+  // "Yusuf & Toni" — the names in Playfair italic, the ampersand in the
+  // script face. Built here rather than in the HTML so it stays driven by
+  // details.json.
+  function renderNames(ctx) {
+    var el = document.getElementById("card-names");
     el.innerHTML = "";
-    [
-      { label: c.when.arrivalLabel, value: ctx.checkin },
-      { label: c.when.departureLabel, value: ctx.checkout },
-    ].forEach(function (item) {
-      var div = document.createElement("div");
-      div.className = "when-date";
-      var l = document.createElement("p");
-      l.className = "when-label";
-      l.textContent = item.label;
-      var v = document.createElement("p");
-      v.className = "when-value";
-      v.textContent = item.value;
-      div.appendChild(l);
-      div.appendChild(v);
-      el.appendChild(div);
-    });
-    var nightsDiv = document.createElement("div");
-    nightsDiv.className = "when-date";
-    var l2 = document.createElement("p");
-    l2.className = "when-label";
-    l2.textContent = c.when.nightsLabel;
-    var v2 = document.createElement("p");
-    v2.className = "when-value";
-    v2.textContent = ctx.nights;
-    nightsDiv.appendChild(l2);
-    nightsDiv.appendChild(v2);
-    el.appendChild(nightsDiv);
+    var a = document.createElement("span");
+    a.textContent = ctx.partnerA;
+    var amp = document.createElement("span");
+    amp.className = "amp";
+    amp.textContent = "&";
+    var b = document.createElement("span");
+    b.textContent = ctx.partnerB;
+    el.appendChild(a);
+    el.appendChild(amp);
+    el.appendChild(b);
   }
 
-  function renderTimeline(ol, days, ctx) {
+  // The at-a-glance block under the greeting: one column per place the
+  // guest is actually invited to, so a Denmark-only guest sees one column
+  // and a both-parts guest sees two.
+  function renderCardMeta(ctx, c) {
+    var wrap = document.getElementById("card-meta");
+    var d = bundle.details;
+    wrap.innerHTML = "";
+
+    var places = [];
+    if (d.denmark) {
+      places.push({
+        place: d.denmark.city,
+        rows: [{ label: c.card.dateLabel, value: ctx.denmarkDate }],
+      });
+    }
+    if (d.spain) {
+      places.push({
+        place: d.spain.city,
+        rows: [
+          { label: c.card.arriveLabel, value: ctx.checkin },
+          { label: c.card.departLabel, value: ctx.checkout },
+        ],
+      });
+    }
+
+    places.forEach(function (p, i) {
+      var item = document.createElement("div");
+      item.className = "card-meta-item";
+      item.style.setProperty("--i", i);
+      var head = document.createElement("p");
+      head.className = "meta-place";
+      head.textContent = p.place;
+      item.appendChild(head);
+      p.rows.forEach(function (row) {
+        var line = document.createElement("p");
+        line.className = "meta-row";
+        var l = document.createElement("span");
+        l.className = "meta-label";
+        l.textContent = row.label;
+        var v = document.createElement("span");
+        v.className = "meta-value";
+        v.textContent = row.value;
+        line.appendChild(l);
+        line.appendChild(v);
+        item.appendChild(line);
+      });
+      wrap.appendChild(item);
+    });
+  }
+
+  // ---- sections ----
+
+  function renderTimeline(ol, steps, ctx) {
+    if (!ol) return;
     ol.innerHTML = "";
-    (days || []).forEach(function (day) {
+    (steps || []).forEach(function (step, i) {
       var li = document.createElement("li");
-      li.className = "plan-item";
+      li.className = "timeline-item";
+      li.style.setProperty("--i", i);
       var label = document.createElement("p");
-      label.className = "plan-label";
-      label.textContent = t(day.label, ctx);
+      label.className = "timeline-label";
+      label.textContent = t(step.label, ctx);
       var title = document.createElement("p");
-      title.className = "plan-title";
-      title.textContent = t(day.title, ctx);
+      title.className = "timeline-title";
+      title.textContent = t(step.title, ctx);
       var body = document.createElement("p");
-      body.className = "plan-body";
-      body.textContent = t(day.body, ctx);
+      body.className = "timeline-body";
+      body.textContent = t(step.body, ctx);
       li.appendChild(label);
       li.appendChild(title);
       li.appendChild(body);
@@ -200,52 +192,50 @@ window.WeddingRender = (function () {
     });
   }
 
-  function renderPlan(ctx, c) {
-    if (!c.how) return;
-    renderTimeline(document.getElementById("plan-timeline"), c.how.days, ctx);
+  function renderDenmark(ctx, c) {
+    if (!c.denmark) return;
+    renderTimeline(document.getElementById("denmark-timeline"), c.denmark.steps, ctx);
   }
 
-  function renderDenmarkDay(ctx, c) {
-    if (!c.denmarkDay) return;
-    renderTimeline(document.getElementById("denmark-day-timeline"), c.denmarkDay.steps, ctx);
-  }
+  function renderPlace(ctx, c) {
+    if (!c.place) return;
+    var d = bundle.details;
+    setText(document.getElementById("place-name"), d.airbnb.name || c.place.nameTBD);
+    setText(document.getElementById("place-address"), d.airbnb.address || c.place.addressTBD);
 
-  function renderAround(ctx, c) {
-    if (!c.around) return;
-    var grid = document.getElementById("around-grid");
-    grid.innerHTML = "";
-    (c.around.items || []).forEach(function (item) {
-      var div = document.createElement("div");
-      div.className = "around-card";
-      var h3 = document.createElement("h3");
-      h3.textContent = t(item.title, ctx);
-      var p = document.createElement("p");
-      p.textContent = t(item.body, ctx);
-      div.appendChild(h3);
-      div.appendChild(p);
-      grid.appendChild(div);
+    var list = document.getElementById("place-amenities");
+    list.innerHTML = "";
+    (c.place.amenities || []).forEach(function (a, i) {
+      var li = document.createElement("li");
+      li.style.setProperty("--i", i);
+      li.textContent = a;
+      list.appendChild(li);
     });
+
+    document.getElementById("place-listing").href = d.airbnb.listingUrl;
+    document.getElementById("place-map").href = d.airbnb.mapUrl;
   }
 
-  function renderBring(ctx, c) {
-    if (!c.bring) return;
+  function renderPlan(ctx, c) {
+    if (!c.plan) return;
+    renderTimeline(document.getElementById("plan-timeline"), c.plan.days, ctx);
+  }
+
+  function renderPractical(ctx, c) {
+    if (!c.practical) return;
+    var d = bundle.details;
+    setText(document.getElementById("cost-amount"), ctx.cost);
+    if (d.paypal) document.getElementById("paypal-link").href = d.paypal.link;
+    document.getElementById("qr-wrap").innerHTML = (d.paypal && d.paypal.qrSvg) || "";
+
     var list = document.getElementById("bring-list");
     list.innerHTML = "";
-    (c.bring.list || []).forEach(function (item) {
+    (c.practical.bringList || []).forEach(function (item, i) {
       var li = document.createElement("li");
+      li.style.setProperty("--i", i);
       li.textContent = t(item, ctx);
       list.appendChild(li);
     });
-  }
-
-  function renderNotes(ctx, c) {
-    if (!c.notes) return;
-    var d = bundle.details;
-    setText(document.getElementById("cost-amount"), ctx.cost);
-    var link = document.getElementById("paypal-link");
-    if (d.paypal) link.href = d.paypal.link;
-    var qrWrap = document.getElementById("qr-wrap");
-    qrWrap.innerHTML = (d.paypal && d.paypal.qrSvg) || "";
   }
 
   function renderFaq(ctx, c) {
@@ -255,6 +245,7 @@ window.WeddingRender = (function () {
     items.forEach(function (item, i) {
       var wrap = document.createElement("div");
       wrap.className = "faq-item";
+      wrap.style.setProperty("--i", i);
       var btn = document.createElement("button");
       btn.type = "button";
       btn.className = "faq-q";
@@ -288,46 +279,34 @@ window.WeddingRender = (function () {
 
   function applyPhotos() {
     var photos = (bundle.details && bundle.details.photos) || {};
-    setPhoto(document.getElementById("hero-photo"), photos.hero);
-    setPhoto(document.getElementById("where-photo"), photos.house);
+    setPhoto(document.getElementById("place-photo"), photos.place);
     setPhoto(document.getElementById("denmark-photo"), photos.denmark);
-    setPhoto(document.getElementById("around-photo"), photos.spain);
-    // Toggled on the section itself (rather than relying on :has() support)
-    // so the scrim + on-photo text colors only apply once there's actually
-    // a photo behind them.
-    document.getElementById("hero").classList.toggle("has-photo", !!photos.hero);
   }
 
-  // Removes (not just hides) every section/nav-item whose content didn't
-  // survive the build-time prune for this guest's event. Runs once, before
-  // the first render — content structure doesn't change on a language
-  // switch, only its translated text does.
+  // Removes (not just hides) every section whose content didn't survive the
+  // build-time prune for this guest's event. Runs once, before the first
+  // render — content structure doesn't change on a language switch, only
+  // its translated text does.
   function applyEventScope() {
     var c = bundle.content[bundle.guest.lang] || bundle.content.en;
     var sectionForKey = {
       denmark: "denmark",
-      denmarkDay: "denmark-day",
-      denmarkTravel: "denmark-travel",
-      where: "where",
-      when: "when",
-      how: "how",
-      around: "around",
-      bring: "bring",
-      notes: "notes",
+      place: "place",
+      plan: "plan",
+      practical: "practical",
     };
     Object.keys(sectionForKey).forEach(function (contentKey) {
-      var present = !!c[contentKey];
-      var sectionId = sectionForKey[contentKey];
-      var navId = "nav-li-" + contentKey;
-      var section = document.getElementById(sectionId);
-      var navLi = document.getElementById(navId);
-      if (!present) {
-        if (section) section.remove();
-        if (navLi) navLi.remove();
-      } else if (section) {
-        section.hidden = false;
-      }
+      var section = document.getElementById(sectionForKey[contentKey]);
+      if (!section) return;
+      if (c[contentKey]) section.hidden = false;
+      else section.remove();
     });
+
+    // The scroll cue points at whatever section actually follows the card.
+    var next = document.querySelector("#card ~ .section, main .section:not(#card)");
+    var cue = document.getElementById("scroll-cue");
+    if (next && cue) cue.href = "#" + next.id;
+    else if (cue) cue.hidden = true;
   }
 
   function setLanguage(lang) {
@@ -337,30 +316,24 @@ window.WeddingRender = (function () {
     var ctx = buildCtx(lang);
 
     document.documentElement.lang = lang;
-    setText(document.getElementById("nav-monogram"), ctx.monogram);
 
-    // bindPass runs first: it resolves data-bind="hero.eyebrow"/"hero.lead"
-    // against c.hero directly, which has no plain "eyebrow"/"lead" key
-    // (only the eyebrowSpain/eyebrowDenmark/eyebrowBoth and
-    // leadSpain/leadDenmark/leadBoth variants) — so it clears them to "".
-    // The event-specific overrides below MUST run after bindPass, the same
-    // order every other event-scoped renderer (renderIntro, etc.) already
-    // follows, or they'd be immediately blanked out again.
-    bindPass(document.getElementById("app"), ctx, c);
+    // bindPass runs first: it resolves data-bind="card.lead" against c.card
+    // directly, which has no plain "lead" key (only the leadSpain /
+    // leadDenmark / leadBoth variants) — so it clears it to "". The
+    // event-specific override below MUST run after bindPass, the same order
+    // every other event-scoped renderer already follows, or it would be
+    // immediately blanked out again.
+    bindPass(document.body, ctx, c);
 
-    var eyebrowKey = { s: "eyebrowSpain", d: "eyebrowDenmark", b: "eyebrowBoth" }[bundle.guest.event] || "eyebrowBoth";
     var leadKey = { s: "leadSpain", d: "leadDenmark", b: "leadBoth" }[bundle.guest.event] || "leadBoth";
-    setText(document.querySelector('[data-bind="hero.eyebrow"]'), t(c.hero[eyebrowKey], ctx));
-    setText(document.querySelector('[data-bind="hero.lead"]'), t(c.hero[leadKey], ctx));
+    setText(document.querySelector('[data-bind="card.lead"]'), t(c.card[leadKey], ctx));
 
-    renderIntro(ctx, c);
-    renderWhere(ctx, c);
-    renderWhen(ctx, c);
+    renderNames(ctx);
+    renderCardMeta(ctx, c);
+    renderDenmark(ctx, c);
+    renderPlace(ctx, c);
     renderPlan(ctx, c);
-    renderDenmarkDay(ctx, c);
-    renderAround(ctx, c);
-    renderBring(ctx, c);
-    renderNotes(ctx, c);
+    renderPractical(ctx, c);
     renderFaq(ctx, c);
 
     if (window.WeddingI18n) window.WeddingI18n.markActive(lang);
@@ -373,8 +346,16 @@ window.WeddingRender = (function () {
     var startLang = (window.WeddingI18n && window.WeddingI18n.preferredLang(bundle.guest.lang)) || bundle.guest.lang || "en";
     setLanguage(startLang);
 
-    document.getElementById("app").hidden = false;
-    if (window.WeddingMain) window.WeddingMain.start(bundle);
+    // The page is painted but sealed behind the envelope. Nothing animates
+    // and nothing scrolls until the guest opens it.
+    var app = document.getElementById("app");
+    app.hidden = false;
+    app.setAttribute("aria-hidden", "true");
+
+    window.WeddingEnvelope.show(bundle, function () {
+      app.removeAttribute("aria-hidden");
+      if (window.WeddingMain) window.WeddingMain.start(bundle);
+    });
   }
 
   return { init: init, setLanguage: setLanguage, getLang: function () { return currentLang; } };

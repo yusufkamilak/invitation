@@ -1,9 +1,10 @@
-# Wedding invitation site
+# Invitation site
 
-A private, personalized wedding invitation site, in two parts — the legal
-act and a friends' getaway. Hosted free on GitHub Pages, live through at
-least October 2027. Full design rationale is in the original plan; this
-file is the day-to-day operator's manual.
+A private, personalized invitation site covering two occasions: a dinner
+and a friends' getaway. The link opens onto a sealed envelope addressed to
+the guest; one tap opens it and reveals their card. Hosted free on GitHub
+Pages, live through at least October 2027. This file is the day-to-day
+operator's manual.
 
 Deliberately generic: this file is committed to the public repo, so it
 avoids naming cities, dates, or guests — all of that lives only in the
@@ -32,13 +33,21 @@ that reaches their browser. A `b` (both) guest's bundle is unpruned. The
 build fails loudly if a pruned bundle still contains a fact it shouldn't
 (see the leak assertion in `build-invites.mjs`).
 
-| event | sections shown | content NOT present in the decrypted bundle |
-|---|---|---|
-| `s` Spain only | Where, When, How, Around, What to bring, Notes | Denmark, The day, Travel; `details.denmark` |
-| `d` Denmark only | Denmark, The day, Travel | Where, When, How, Around, What to bring, Notes; `details.spain`, `details.airbnb`, `details.paypal` |
-| `b` both | everything | only the unused single-event hero/intro copy variants |
+Every guest sees the card, the RSVP section and the FAQ. What differs:
 
-Caveat: the repo itself is public, so all four `assets/ph-*.jpg` files are
+| event | extra sections shown | content NOT present in the decrypted bundle |
+|---|---|---|
+| `s` Spain only | `place`, `plan`, `practical` | `denmark`; `details.denmark` |
+| `d` Denmark only | `denmark` | `place`, `plan`, `practical`; `details.spain`, `details.airbnb`, `details.paypal` |
+| `b` both | all four | only the unused single-event `card.lead*` variants |
+
+Adding a section means touching three places, or the gating silently
+breaks: the `sectionForKey` map in `js/render.js`, the matching entry in
+`CONTENT_PRUNE` in `tools/build-invites.mjs`, and the `<section id="...">`
+in `index.html`. Forget the prune entry and content leaks; forget
+`sectionForKey` and the wrong guest sees an empty section.
+
+Caveat: the repo itself is public, so both `assets/ph-*.jpg` files are
 browsable on GitHub regardless of event. Pruning hides which guest's page
 *references* which photo — it can't hide that the files exist. Don't put
 anything identifying (e.g. a recognisable venue) in a gated photo slot.
@@ -60,8 +69,8 @@ anything identifying (e.g. a recognisable venue) in a gated photo slot.
      belongs to only one event lives under an event-specific key so pruning
      can find it — see the table above.
    - `content/details.json` — facts: dates, Airbnb, PayPal link, names, and
-     `photos` (paths under `assets/` for the hero photo and the two photo
-     bands — see "Photos" below).
+     `photos` (paths under `assets/` for the two photo insets, see "Photos"
+     below).
    - `tools/guests.csv` — the guest list (`name,lang,event,id,key` — leave
      `id`/`key` blank for new guests, the build script fills them in).
 2. Run:
@@ -91,24 +100,40 @@ Anna,de,b,,
 
 ## Photos
 
-`assets/ph-hero.jpg`, `ph-spain.jpg`, `ph-house.jpg`, `ph-denmark.jpg` are
-currently **stock placeholders** (picsum.photos) — swap them for real photos
-before sending out any more links. Keep the same filenames (or update the
-paths in `content/details.json`'s `photos` block) and re-run
+`assets/ph-house.jpg` and `assets/ph-denmark.jpg` are currently **stock
+placeholders** (picsum.photos) — swap them for real photos before sending
+out any more links. Keep the same filenames (or update the paths in
+`content/details.json`'s `photos` block) and re-run
 `node tools/build-invites.mjs`:
 
-- `ph-hero.jpg` — behind the "Dear {name}" hero text, everyone sees it.
-  Sits behind a feathered dark stripe (not a full-screen overlay) so the
-  text stays readable while most of the photo shows through. Pick something
-  that reads fine both cropped tight (mobile) and wide (desktop) — the
-  stripe centers over the text block regardless of viewport.
-- `ph-house.jpg` — the photo band in "Where" (Spain guests only).
-- `ph-denmark.jpg` — the photo band in the Denmark section (Denmark guests
-  only).
-- `ph-spain.jpg` — the photo band in "Around" (Spain guests only).
+- `ph-house.jpg` — `photos.place`, the inset in the Spain section (Spain
+  guests only).
+- `ph-denmark.jpg` — `photos.denmark`, the inset in the Denmark section
+  (Denmark guests only).
 
-Any slot left blank in `content/details.json` (`"hero": ""`, etc.) is simply
-skipped — no broken image, the section just renders without a photo.
+Both are shown 16:10 inside a thin gold mat, so anything with the subject
+near the vertical edges will get cropped. There is deliberately no photo on
+the card itself: it is type only.
+
+Any slot left blank in `content/details.json` (`"place": ""`, etc.) is
+simply skipped — no broken image, the section just renders without a
+photo.
+
+## House style for the copy
+
+Three rules the current copy follows. Breaking any of them is the kind of
+thing that only shows up once links are already out:
+
+- **No em dashes or en dashes** anywhere in `content/*.json`. Use a comma,
+  a colon, or a full stop. Check with
+  `grep -n '[—–]' content/*.json` before building.
+- **No wedding vocabulary.** This is a dinner and a getaway, not a wedding.
+  That covers `Hochzeit`/`Trauung` and `düğün`/`nikah` too.
+- **One or two short sentences per body.** Nothing over about 25 words.
+
+Also keep `en.json`, `tr.json` and `de.json` key-identical. A key present in
+one file and missing in another renders as an empty string with no error, so
+a missing translation is invisible until a guest switches language.
 
 ## Revoking a guest
 

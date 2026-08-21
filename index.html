@@ -7,6 +7,7 @@
 <meta name="referrer" content="no-referrer">
 <title>An Invitation</title>
 <meta name="description" content="A private invitation.">
+<link rel="stylesheet" href="css/fonts-embedded.css">
 <link rel="stylesheet" href="css/style.css">
 <link rel="icon" href="data:,">
 </head>
@@ -35,13 +36,15 @@
 
     <nav id="site-nav" class="site-nav">
       <div class="site-nav-inner">
-        <a href="#hero" class="site-nav-mark" aria-hidden="true">&#10022;</a>
+        <a href="#hero" class="site-nav-mark" id="nav-monogram" aria-hidden="true"></a>
         <ul class="site-nav-links">
-          <li><a href="#where" data-i18n="nav.where">Where</a></li>
-          <li><a href="#when" data-i18n="nav.when">When</a></li>
-          <li><a href="#how" data-i18n="nav.how">How</a></li>
-          <li><a href="#notes" data-i18n="nav.notes">Notes</a></li>
+          <li id="nav-li-denmark"><a href="#denmark" data-i18n="nav.denmark">Denmark</a></li>
+          <li id="nav-li-where"><a href="#where" data-i18n="nav.where">Where</a></li>
+          <li id="nav-li-when"><a href="#when" data-i18n="nav.when">When</a></li>
+          <li id="nav-li-how"><a href="#how" data-i18n="nav.how">How</a></li>
+          <li id="nav-li-notes"><a href="#notes" data-i18n="nav.notes">Notes</a></li>
           <li><a href="#rsvp" data-i18n="nav.rsvp">RSVP</a></li>
+          <li><a href="#questions" data-i18n="nav.questions">Questions</a></li>
           <li><a href="#faq" data-i18n="nav.faq">FAQ</a></li>
         </ul>
         <div class="lang-switch" id="lang-switch" role="group" aria-label="Language">
@@ -58,6 +61,7 @@
         <p class="hero-eyebrow" data-bind="hero.eyebrow"></p>
         <h1 class="hero-greeting" data-bind="hero.greeting"></h1>
         <p class="hero-lead" data-bind="hero.lead"></p>
+        <div class="hero-rule" aria-hidden="true"><span></span></div>
         <div class="hero-meta">
           <div class="hero-countdown" id="countdown" aria-live="off">
             <span class="countdown-num" id="cd-days">–</span>

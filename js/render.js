@@ -45,18 +45,20 @@ window.WeddingRender = (function () {
 
   function buildCtx(lang) {
     var d = bundle.details;
+    var c = bundle.content[lang];
     var nights = nightsBetween(d.spain.checkin, d.spain.checkout);
     return {
       name: bundle.guest.name,
       partnerA: d.couple.partnerA,
       partnerB: d.couple.partnerB,
       denmarkCity: d.denmark.city,
-      denmarkDate: fmtDate(d.denmark.date, lang),
+      denmarkDate: d.denmark.date ? fmtDate(d.denmark.date, lang) : c.denmark.tbcLabel,
       spainCity: d.spain.city,
       checkin: fmtDate(d.spain.checkin, lang),
       checkout: fmtDate(d.spain.checkout, lang),
       nights: nights,
       cost: fmtCost(d.spain.costPerPerson, d.spain.currency, lang),
+      monogram: (d.couple.partnerA || "").charAt(0) + " & " + (d.couple.partnerB || "").charAt(0),
     };
   }
 
@@ -111,8 +113,8 @@ window.WeddingRender = (function () {
 
   function renderWhere(ctx, c) {
     var d = bundle.details;
-    setText(document.querySelector('[data-bind="where.name"]'), d.airbnb.name);
-    setText(document.querySelector('[data-bind="where.address"]'), d.airbnb.address);
+    setText(document.querySelector('[data-bind="where.name"]'), d.airbnb.name || c.where.nameTBD);
+    setText(document.querySelector('[data-bind="where.address"]'), d.airbnb.address || c.where.addressTBD);
 
     var list = document.getElementById("where-amenities");
     list.innerHTML = "";
@@ -220,8 +222,18 @@ window.WeddingRender = (function () {
 
   function applyEventVisibility() {
     var event = bundle.guest.event; // 's' | 'd' | 'b'
-    var denmarkSection = document.getElementById("denmark");
-    denmarkSection.hidden = !(event === "d" || event === "b");
+    var showDenmark = event === "d" || event === "b";
+    var showSpain = event === "s" || event === "b";
+
+    document.getElementById("denmark").hidden = !showDenmark;
+    document.getElementById("nav-li-denmark").hidden = !showDenmark;
+    // Where/When/How/Notes are all about the Spain getaway specifically —
+    // a Denmark-only guest has no reason to see the Airbnb, the day plan,
+    // or a request to pay their share of an accommodation cost.
+    ["where", "when", "how", "notes"].forEach(function (id) {
+      document.getElementById(id).hidden = !showSpain;
+      document.getElementById("nav-li-" + id).hidden = !showSpain;
+    });
   }
 
   function setLanguage(lang) {
@@ -236,6 +248,7 @@ window.WeddingRender = (function () {
     var leadKey = { s: "leadSpain", d: "leadDenmark", b: "leadBoth" }[bundle.guest.event] || "leadBoth";
     setText(document.querySelector('[data-bind="hero.greeting"]'), t(c.hero.greeting, ctx));
     setText(document.querySelector('[data-bind="hero.lead"]'), t(c.hero[leadKey], ctx));
+    setText(document.getElementById("nav-monogram"), ctx.monogram);
 
     bindPass(document.getElementById("app"), ctx, c);
     renderStory(ctx, c);

@@ -7,5 +7,5 @@
  * bundle, checked server-side in apps-script/Code.gs.
  */
 window.WEDDING_CONFIG = {
-  APPS_SCRIPT_URL: "REPLACE_WITH_APPS_SCRIPT_EXEC_URL",
+  APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbxzRbhVyf9QZkM-JSj94qlzFdSx_U_LUdM0byrb9w3oLyILYgtacXVPk4a4VPq2o467/exec",
 };

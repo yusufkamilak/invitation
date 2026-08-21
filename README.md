@@ -100,10 +100,8 @@ Anna,de,b,,
 
 ## Photos
 
-`assets/ph-house.jpg` and `assets/ph-denmark.jpg` are currently **stock
-placeholders** (picsum.photos) — swap them for real photos before sending
-out any more links. Keep the same filenames (or update the paths in
-`content/details.json`'s `photos` block) and re-run
+Two slots, both real photos. To swap one, keep the same filename (or update
+the path in `content/details.json`'s `photos` block) and re-run
 `node tools/build-invites.mjs`:
 
 - `ph-house.jpg` — `photos.place`, the inset in the Spain section (Spain
@@ -112,8 +110,16 @@ out any more links. Keep the same filenames (or update the paths in
   (Denmark guests only).
 
 Both are shown 16:10 inside a thin gold mat, so anything with the subject
-near the vertical edges will get cropped. There is deliberately no photo on
-the card itself: it is type only.
+near the top or bottom edge will get cropped. There is deliberately no
+photo on the card itself: it is type only.
+
+Size them before committing. 1400px wide at quality 60 is about 250 to
+300 KB and still sharp at 2x in a frame that never renders wider than
+~552 CSS px:
+
+```
+sips -s format jpeg -s formatOptions 60 --resampleWidth 1400 in.jpg --out assets/ph-house.jpg
+```
 
 Any slot left blank in `content/details.json` (`"place": ""`, etc.) is
 simply skipped — no broken image, the section just renders without a

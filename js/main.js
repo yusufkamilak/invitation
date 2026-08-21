@@ -9,7 +9,10 @@ window.WeddingMain = (function () {
   var bundle = null;
 
   // ---------------------------------------------------------------
-  // Scroll reveal
+  // Scroll reveal — sections fade/rise in; repeated list items (story
+  // cards, plan steps, FAQ rows, ...) stagger via CSS nth-child delays
+  // once their parent section picks up .is-visible, so no per-item JS
+  // bookkeeping is needed here.
   // ---------------------------------------------------------------
   function initReveal() {
     var sections = document.querySelectorAll(".section:not(.hero)");
@@ -32,19 +35,84 @@ window.WeddingMain = (function () {
   }
 
   // ---------------------------------------------------------------
-  // Countdown to arrival
+  // Hero entrance — plays once, right after the page unlocks
+  // ---------------------------------------------------------------
+  function initHeroEntrance() {
+    requestAnimationFrame(function () {
+      document.getElementById("hero").classList.add("is-ready");
+    });
+  }
+
+  // ---------------------------------------------------------------
+  // Nav — subtle stronger border/backdrop once the page has scrolled
+  // ---------------------------------------------------------------
+  function initNavScroll() {
+    var nav = document.getElementById("site-nav");
+    function tick() {
+      nav.classList.toggle("is-scrolled", window.scrollY > 40);
+    }
+    tick();
+    window.addEventListener("scroll", tick, { passive: true });
+  }
+
+  // ---------------------------------------------------------------
+  // Countdown — to the Denmark date for a Denmark-only guest, to Spain
+  // arrival otherwise. Hidden entirely when there's no date to count to
+  // yet (e.g. Denmark's date is still TBC), and counts up from 0 the
+  // first time it scrolls into view rather than snapping to the value.
   // ---------------------------------------------------------------
   var countdownTimer = null;
   function initCountdown() {
-    var target = new Date(bundle.details.spain.checkin + "T00:00:00");
-    var el = document.getElementById("cd-days");
-    function tick() {
-      var diff = Math.ceil((target - new Date()) / 86400000);
-      el.textContent = diff > 0 ? diff : "0";
+    var d = bundle.details;
+    var iso = d.spain ? d.spain.checkin : (d.denmark && d.denmark.date);
+    var el = document.getElementById("countdown");
+    if (!iso) {
+      el.hidden = true;
+      return;
     }
-    tick();
+    var target = new Date(iso + "T00:00:00");
+    var numEl = document.getElementById("cd-days");
+
+    function daysLeft() {
+      var diff = Math.ceil((target - new Date()) / 86400000);
+      return diff > 0 ? diff : 0;
+    }
+
+    function countUpTo(value) {
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || !value) {
+        numEl.textContent = value;
+        return;
+      }
+      var start = null;
+      var duration = 900;
+      function step(ts) {
+        if (start === null) start = ts;
+        var progress = Math.min((ts - start) / duration, 1);
+        numEl.textContent = Math.round(progress * value);
+        if (progress < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
+
+    el.hidden = false;
+    var animated = false;
+    if ("IntersectionObserver" in window) {
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting && !animated) {
+            animated = true;
+            countUpTo(daysLeft());
+            io.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.6 });
+      io.observe(el);
+    } else {
+      numEl.textContent = daysLeft();
+    }
+
     if (countdownTimer) clearInterval(countdownTimer);
-    countdownTimer = setInterval(tick, 60 * 60 * 1000);
+    countdownTimer = setInterval(function () { numEl.textContent = daysLeft(); }, 60 * 60 * 1000);
   }
 
   // ---------------------------------------------------------------
@@ -173,6 +241,8 @@ window.WeddingMain = (function () {
 
   function start(b) {
     bundle = b;
+    initHeroEntrance();
+    initNavScroll();
     initReveal();
     initCountdown();
     bindFaq();

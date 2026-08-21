@@ -31,7 +31,11 @@
     </div>
   </div>
 
-  <!-- Real content: rendered by render.js once a guest bundle is decrypted -->
+  <!-- Real content: rendered by render.js once a guest bundle is decrypted.
+       Sections for the part(s) a guest wasn't invited to don't exist in
+       their decrypted bundle at all (see tools/build-invites.mjs pruning),
+       so render.js removes the matching markup below entirely rather than
+       just hiding it — nothing about the other part ships to their page. -->
   <div id="app" hidden>
 
     <nav id="site-nav" class="site-nav">
@@ -39,9 +43,13 @@
         <a href="#hero" class="site-nav-mark" id="nav-monogram" aria-hidden="true"></a>
         <ul class="site-nav-links">
           <li id="nav-li-denmark"><a href="#denmark" data-i18n="nav.denmark">Denmark</a></li>
+          <li id="nav-li-denmarkDay"><a href="#denmark-day" data-i18n="nav.denmarkDay">The day</a></li>
+          <li id="nav-li-denmarkTravel"><a href="#denmark-travel" data-i18n="nav.denmarkTravel">Travel</a></li>
           <li id="nav-li-where"><a href="#where" data-i18n="nav.where">Where</a></li>
           <li id="nav-li-when"><a href="#when" data-i18n="nav.when">When</a></li>
           <li id="nav-li-how"><a href="#how" data-i18n="nav.how">How</a></li>
+          <li id="nav-li-around"><a href="#around" data-i18n="nav.around">Around</a></li>
+          <li id="nav-li-bring"><a href="#bring" data-i18n="nav.bring">What to bring</a></li>
           <li id="nav-li-notes"><a href="#notes" data-i18n="nav.notes">Notes</a></li>
           <li><a href="#rsvp" data-i18n="nav.rsvp">RSVP</a></li>
           <li><a href="#questions" data-i18n="nav.questions">Questions</a></li>
@@ -58,33 +66,52 @@
     <main>
 
       <section id="hero" class="section hero">
-        <p class="hero-eyebrow" data-bind="hero.eyebrow"></p>
-        <h1 class="hero-greeting" data-bind="hero.greeting"></h1>
-        <p class="hero-lead" data-bind="hero.lead"></p>
-        <div class="hero-rule" aria-hidden="true"><span></span></div>
-        <div class="hero-meta">
-          <div class="hero-countdown" id="countdown" aria-live="off">
-            <span class="countdown-num" id="cd-days">–</span>
-            <span class="countdown-label" data-i18n="hero.countdownLabel">days to go</span>
+        <div class="hero-photo" id="hero-photo" aria-hidden="true"></div>
+        <div class="hero-scrim" aria-hidden="true"></div>
+        <div class="hero-inner">
+          <p class="hero-eyebrow" data-bind="hero.eyebrow"></p>
+          <h1 class="hero-greeting" data-bind="hero.greeting"></h1>
+          <p class="hero-lead" data-bind="hero.lead"></p>
+          <div class="hero-rule" aria-hidden="true"><span></span></div>
+          <div class="hero-meta">
+            <div class="hero-countdown" id="countdown" aria-live="off" hidden>
+              <span class="countdown-num" id="cd-days">–</span>
+              <span class="countdown-label" data-i18n="hero.countdownLabel">days to go</span>
+            </div>
           </div>
+          <a class="scroll-cue" href="#intro" data-i18n="hero.scrollCue" aria-label="Scroll down"></a>
         </div>
-        <a class="scroll-cue" href="#story" data-i18n="hero.scrollCue" aria-label="Scroll down"></a>
       </section>
 
-      <section id="story" class="section story">
-        <h2 class="section-kicker" data-bind="story.title"></h2>
+      <section id="intro" class="section intro">
+        <h2 class="section-kicker" data-bind="intro.title"></h2>
         <div class="story-grid" id="story-grid"><!-- populated by render.js --></div>
       </section>
 
       <section id="denmark" class="section denmark" hidden>
         <h2 class="section-kicker" data-i18n="nav.denmark">Denmark</h2>
+        <div class="photo-band" id="denmark-photo" aria-hidden="true"></div>
         <h3 class="section-title" data-bind="denmark.title"></h3>
         <p class="section-sub" data-bind="denmark.dateLine"></p>
         <p class="section-body" data-bind="denmark.body"></p>
       </section>
 
-      <section id="where" class="section">
+      <section id="denmark-day" class="section" hidden>
+        <h2 class="section-kicker" data-i18n="nav.denmarkDay">The day</h2>
+        <p class="section-sub" data-bind="denmarkDay.subtitle"></p>
+        <ol class="plan-timeline" id="denmark-day-timeline"><!-- populated by render.js --></ol>
+      </section>
+
+      <section id="denmark-travel" class="section" hidden>
+        <h2 class="section-kicker" data-i18n="nav.denmarkTravel">Travel</h2>
+        <h3 class="section-title" data-bind="denmarkTravel.title"></h3>
+        <p class="section-body" data-bind="denmarkTravel.body"></p>
+        <p class="section-body" data-bind="denmarkTravel.note"></p>
+      </section>
+
+      <section id="where" class="section" hidden>
         <h2 class="section-kicker" data-i18n="nav.where">Where</h2>
+        <div class="photo-band" id="where-photo" aria-hidden="true"></div>
         <h3 class="section-title" data-bind="where.name"></h3>
         <p class="section-sub" data-bind="where.address"></p>
         <p class="section-body" data-bind="where.body"></p>
@@ -95,19 +122,35 @@
         </div>
       </section>
 
-      <section id="when" class="section">
+      <section id="when" class="section" hidden>
         <h2 class="section-kicker" data-i18n="nav.when">When</h2>
         <div class="when-dates" id="when-dates"><!-- populated by render.js --></div>
         <p class="section-body" data-bind="when.note"></p>
       </section>
 
-      <section id="how" class="section">
+      <section id="how" class="section" hidden>
         <h2 class="section-kicker" data-i18n="nav.how">How</h2>
         <p class="section-sub" data-bind="how.subtitle"></p>
         <ol class="plan-timeline" id="plan-timeline"><!-- populated by render.js --></ol>
       </section>
 
-      <section id="notes" class="section notes">
+      <section id="around" class="section" hidden>
+        <h2 class="section-kicker" data-i18n="nav.around">Around</h2>
+        <div class="photo-band" id="around-photo" aria-hidden="true"></div>
+        <h3 class="section-title" data-bind="around.title"></h3>
+        <p class="section-sub" data-bind="around.subtitle"></p>
+        <div class="around-grid" id="around-grid"><!-- populated by render.js --></div>
+      </section>
+
+      <section id="bring" class="section" hidden>
+        <h2 class="section-kicker" data-i18n="nav.bring">What to bring</h2>
+        <h3 class="section-title" data-bind="bring.title"></h3>
+        <p class="section-body" data-bind="bring.weatherNote"></p>
+        <p class="section-body" data-bind="bring.dressNote"></p>
+        <ul class="check-list" id="bring-list"><!-- populated by render.js --></ul>
+      </section>
+
+      <section id="notes" class="section notes" hidden>
         <h2 class="section-kicker" data-i18n="nav.notes">Notes</h2>
         <p class="section-body" data-bind="notes.transportNote"></p>
         <div class="cost-card">

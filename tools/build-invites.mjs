@@ -76,6 +76,78 @@ function toCSV(header, rows) {
   return lines.join("\n") + "\n";
 }
 
+// ---- per-event pruning ----
+// A guest's bundle is decrypted client-side, so *anything* left in it is
+// readable in devtools regardless of what the UI chooses to hide. A
+// Denmark-only guest must never receive Barcelona facts (or vice versa) —
+// so we delete the other part's content before it's ever encrypted, per
+// guest, per language.
+function deletePath(obj, path) {
+  const parts = path.split(".");
+  let node = obj;
+  for (let i = 0; i < parts.length - 1; i++) {
+    if (node == null || typeof node !== "object") return;
+    node = node[parts[i]];
+  }
+  if (node && typeof node === "object") delete node[parts[parts.length - 1]];
+}
+
+// keys removed from content/{lang}.json depending on which event(s) a guest
+// is invited to. "b" (both) only loses the unused single-event hero/intro
+// variants — everything else stays since a both-guest sees both parts.
+const CONTENT_PRUNE = {
+  s: [
+    "denmark", "denmarkDay", "denmarkTravel",
+    "intro.denmark", "intro.titleDenmark", "intro.titleBoth",
+    "hero.eyebrowDenmark", "hero.eyebrowBoth", "hero.leadDenmark", "hero.leadBoth",
+    "nav.denmark", "nav.denmarkDay", "nav.denmarkTravel",
+    "faq.denmark",
+  ],
+  d: [
+    "where", "when", "how", "around", "bring", "notes",
+    "intro.spain", "intro.titleSpain", "intro.titleBoth",
+    "hero.eyebrowSpain", "hero.eyebrowBoth", "hero.leadSpain", "hero.leadBoth",
+    "nav.where", "nav.when", "nav.how", "nav.around", "nav.bring", "nav.notes",
+    "faq.spain",
+  ],
+  b: [
+    "hero.eyebrowSpain", "hero.eyebrowDenmark",
+    "hero.leadSpain", "hero.leadDenmark",
+    "intro.titleSpain", "intro.titleDenmark",
+  ],
+};
+
+// keys removed from content/details.json the same way.
+const DETAILS_PRUNE = {
+  s: ["denmark", "photos.denmark"],
+  d: ["spain", "airbnb", "paypal", "photos.spain", "photos.house"],
+  b: [],
+};
+
+// facts that must never appear in a pruned bundle for a given event — a
+// cheap leak assertion run on every build, on the exact plaintext that gets
+// encrypted.
+const LEAK_CHECK = {
+  s: (details) => [details.denmark?.city].filter(Boolean),
+  d: (details) => [
+    details.spain?.city,
+    details.airbnb?.listingUrl,
+    details.paypal?.link,
+    details.spain?.costPerPerson != null ? String(details.spain.costPerPerson) : null,
+  ].filter(Boolean),
+  b: () => [],
+};
+
+function pruneForEvent(contentByLang, details, event) {
+  const content = JSON.parse(JSON.stringify(contentByLang));
+  const prunedDetails = JSON.parse(JSON.stringify(details));
+  for (const lang of Object.keys(content)) {
+    for (const path of CONTENT_PRUNE[event] || []) deletePath(content[lang], path);
+  }
+  for (const path of DETAILS_PRUNE[event] || []) deletePath(prunedDetails, path);
+  return { content, details: prunedDetails };
+}
+
 // ---- setup ----
 if (!existsSync(D_DIR)) mkdirSync(D_DIR, { recursive: true });
 
@@ -137,12 +209,25 @@ for (const row of rows) {
   const keyBytes = Buffer.from(key.replace(/-/g, "+").replace(/_/g, "/"), "base64");
   if (keyBytes.length !== 32) fail(`Guest "${name}": stored key is not 32 bytes — delete its id/key cells and re-run.`);
 
+  const pruned = pruneForEvent(contentByLang, details, event);
+
   const bundle = {
     guest: { name, lang, event },
-    content: contentByLang,
-    details,
+    content: pruned.content,
+    details: pruned.details,
     auth: authToken,
   };
+
+  // Leak assertion: the exact plaintext we're about to encrypt must not
+  // contain any fact belonging to the part(s) this guest wasn't invited to.
+  // Checked against the *original* (unpruned) details — checking the pruned
+  // copy would trivially always pass, since pruning already deleted the facts.
+  const plainCheck = JSON.stringify(bundle);
+  for (const needle of LEAK_CHECK[event](details)) {
+    if (needle && plainCheck.includes(needle)) {
+      fail(`Guest "${name}" (event "${event}"): pruned bundle still contains "${needle}" — fix CONTENT_PRUNE/DETAILS_PRUNE before shipping.`);
+    }
+  }
 
   const plaintext = Buffer.from(JSON.stringify(bundle), "utf8");
   const iv = randomBytes(12);

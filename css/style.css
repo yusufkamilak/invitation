@@ -14,6 +14,13 @@
   --success:    #4a6b4d;
   --error:      #93394a;
 
+  /* Text sitting directly on a photo (hero, photo bands) — fixed regardless
+     of light/dark scheme, since it's set against a photograph, not --paper. */
+  --on-photo:      #f7f1e8;
+  --on-photo-soft: #d9cbbd;
+  --on-photo-gold: #d9b878;
+  --on-photo-accent: #e8a3ae;
+
   --serif: "Playfair Display", Georgia, "Iowan Old Style", "Times New Roman", serif;
   --script: "Give You Glory", "Segoe Script", cursive;
   --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -148,13 +155,22 @@ input, textarea { font: inherit; color: inherit; }
 }
 .site-nav-links {
   display: none;
-  gap: var(--space-3);
+  gap: 1.1rem;
   font-size: var(--step--1);
   letter-spacing: 0.02em;
+  flex-wrap: wrap;
+  row-gap: 0.3rem;
+  justify-content: flex-end;
 }
-.site-nav-links a { text-decoration: none; opacity: 0.75; }
+.site-nav-links a { text-decoration: none; opacity: 0.75; white-space: nowrap; }
 .site-nav-links a:hover { opacity: 1; }
-@media (min-width: 56rem) {
+/* A both-parts guest sees up to 12 nav items — a bit much for one line at
+   the min-width where the nav switches on, so give it more room before
+   showing and let the row itself wrap without breaking the sticky nav
+   (min-height instead of a fixed height absorbs the extra row). */
+.site-nav { height: auto; min-height: var(--nav-h); }
+.site-nav-inner { flex-wrap: wrap; padding-block: 0.6rem; row-gap: 0.4rem; }
+@media (min-width: 64rem) {
   .site-nav-links { display: flex; }
 }
 .lang-switch {
@@ -189,6 +205,41 @@ main { overflow-x: hidden; }
   transition: opacity 0.7s var(--ease), transform 0.7s var(--ease);
 }
 .section.is-visible { opacity: 1; transform: translateY(0); }
+
+/* Repeated list items (story/around cards, FAQ rows, timeline steps,
+   date/tag chips) fade up in a gentle stagger once their section becomes
+   visible — pure CSS, driven off the ancestor .is-visible class the
+   IntersectionObserver in main.js already toggles. */
+.story-card,
+.around-card,
+.faq-item,
+.plan-item,
+.when-date,
+.tag-list li,
+.check-list li {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.6s var(--ease), transform 0.6s var(--ease);
+}
+.section.is-visible :is(.story-card, .around-card, .faq-item, .plan-item, .when-date, .tag-list li, .check-list li) {
+  opacity: 1;
+  transform: translateY(0);
+}
+.section.is-visible .story-card:nth-child(1), .section.is-visible .around-card:nth-child(1), .section.is-visible .faq-item:nth-child(1), .section.is-visible .plan-item:nth-child(1), .section.is-visible .when-date:nth-child(1), .section.is-visible .tag-list li:nth-child(1), .section.is-visible .check-list li:nth-child(1) { transition-delay: 0.05s; }
+.section.is-visible .story-card:nth-child(2), .section.is-visible .around-card:nth-child(2), .section.is-visible .faq-item:nth-child(2), .section.is-visible .plan-item:nth-child(2), .section.is-visible .when-date:nth-child(2), .section.is-visible .tag-list li:nth-child(2), .section.is-visible .check-list li:nth-child(2) { transition-delay: 0.12s; }
+.section.is-visible .story-card:nth-child(3), .section.is-visible .around-card:nth-child(3), .section.is-visible .faq-item:nth-child(3), .section.is-visible .plan-item:nth-child(3), .section.is-visible .when-date:nth-child(3), .section.is-visible .tag-list li:nth-child(3), .section.is-visible .check-list li:nth-child(3) { transition-delay: 0.19s; }
+.section.is-visible .story-card:nth-child(4), .section.is-visible .around-card:nth-child(4), .section.is-visible .faq-item:nth-child(4), .section.is-visible .plan-item:nth-child(4), .section.is-visible .when-date:nth-child(4), .section.is-visible .tag-list li:nth-child(4), .section.is-visible .check-list li:nth-child(4) { transition-delay: 0.26s; }
+.section.is-visible .faq-item:nth-child(5), .section.is-visible .plan-item:nth-child(5), .section.is-visible .check-list li:nth-child(5) { transition-delay: 0.33s; }
+.section.is-visible .faq-item:nth-child(6) { transition-delay: 0.4s; }
+.section.is-visible .faq-item:nth-child(7) { transition-delay: 0.47s; }
+.section.is-visible .faq-item:nth-child(8) { transition-delay: 0.54s; }
+.section.is-visible .faq-item:nth-child(9) { transition-delay: 0.6s; }
+.section.is-visible .faq-item:nth-child(10) { transition-delay: 0.66s; }
+.section.is-visible .faq-item:nth-child(11) { transition-delay: 0.72s; }
+
+.site-nav { transition: height 0.3s var(--ease), border-color 0.3s var(--ease); }
+.site-nav.is-scrolled { border-bottom-color: var(--gold); }
+
 .section-kicker {
   font-family: var(--sans);
   font-size: var(--step--1);
@@ -203,6 +254,8 @@ main { overflow-x: hidden; }
 
 /* Hero */
 .hero {
+  position: relative;
+  overflow: hidden;
   min-height: 100svh;
   display: flex;
   flex-direction: column;
@@ -214,6 +267,57 @@ main { overflow-x: hidden; }
   opacity: 1;
   transform: none;
 }
+.hero-photo {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  transform: scale(1.08);
+  transition: transform 2.4s var(--ease);
+}
+.hero-photo[hidden] { display: none; }
+.hero.is-ready .hero-photo { transform: scale(1); }
+/* The scrim is a feathered horizontal band behind the text, not a
+   full-screen wash — most of the photo stays visible top and bottom. */
+.hero-scrim {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: min(64vh, 34rem);
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0%,
+    rgba(0, 0, 0, 0.6) 18%,
+    rgba(0, 0, 0, 0.64) 82%,
+    rgba(0, 0, 0, 0) 100%
+  );
+  pointer-events: none;
+}
+/* No photo configured (or it failed to load) — fall back to the plain
+   paper background instead of an empty dark stripe. */
+.hero:not(.has-photo) .hero-scrim { display: none; }
+.hero-inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.9s var(--ease), transform 0.9s var(--ease);
+}
+.hero.is-ready .hero-inner { opacity: 1; transform: none; }
+.hero.has-photo .hero-eyebrow { color: var(--on-photo-gold); }
+.hero.has-photo .hero-greeting { color: var(--on-photo); }
+.hero.has-photo .hero-lead { color: var(--on-photo-soft); }
+.hero.has-photo .hero-rule { color: var(--on-photo-gold); }
+.hero.has-photo .hero-rule::before,
+.hero.has-photo .hero-rule::after { background: var(--on-photo-gold); }
+.hero.has-photo .countdown-num { color: var(--on-photo-accent); }
+.hero.has-photo .countdown-label,
+.hero.has-photo .scroll-cue { color: var(--on-photo-soft); }
 .hero-eyebrow {
   font-family: var(--sans);
   font-size: var(--step--1);
@@ -246,7 +350,13 @@ main { overflow-x: hidden; }
   height: 1px;
   background: var(--gold);
   opacity: 0.6;
+  transform: scaleX(0);
+  transition: transform 0.8s var(--ease) 0.3s;
 }
+.hero-rule::before { transform-origin: right; }
+.hero-rule::after { transform-origin: left; }
+.hero.is-ready .hero-rule::before,
+.hero.is-ready .hero-rule::after { transform: scaleX(1); }
 .hero-rule span {
   font-family: var(--script);
   font-size: 1.3rem;
@@ -255,7 +365,8 @@ main { overflow-x: hidden; }
 .hero-rule span::before { content: "&"; }
 .hero-meta { margin-bottom: var(--space-5); }
 .hero-countdown { display: flex; align-items: baseline; justify-content: center; gap: 0.5rem; }
-.countdown-num { font-family: var(--serif); font-size: var(--step-2); color: var(--accent); }
+.hero-countdown[hidden] { display: none; }
+.countdown-num { font-family: var(--serif); font-size: var(--step-2); color: var(--accent); font-variant-numeric: tabular-nums; }
 .countdown-label { color: var(--ink-soft); font-size: var(--step--1); }
 .scroll-cue {
   font-size: var(--step--1);
@@ -284,6 +395,19 @@ main { overflow-x: hidden; }
 .story-card p { color: var(--ink-soft); }
 
 /* Where / tags / buttons */
+.photo-band {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 4px;
+  background-size: cover;
+  background-position: center;
+  margin-bottom: var(--space-3);
+  transform: scale(1.04);
+  opacity: 0;
+  transition: transform 1s var(--ease), opacity 1s var(--ease);
+}
+.photo-band[hidden] { display: none; }
+.section.is-visible .photo-band { transform: scale(1); opacity: 1; }
 .tag-list { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: var(--space-2) 0; }
 .tag-list li {
   font-size: var(--step--1);
@@ -335,6 +459,40 @@ main { overflow-x: hidden; }
 .plan-label { font-size: var(--step--1); color: var(--accent); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.25rem; }
 .plan-title { font-family: var(--serif); font-size: var(--step-1); margin-bottom: 0.25rem; }
 .plan-body { color: var(--ink-soft); }
+
+/* Around */
+.around-grid {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+@media (min-width: 40rem) {
+  .around-grid { grid-template-columns: 1fr 1fr; }
+}
+.around-card {
+  padding: var(--space-3);
+  background: var(--paper-alt);
+  border-radius: 4px;
+}
+.around-card h3 { font-family: var(--serif); font-size: var(--step-0); margin-bottom: 0.35rem; }
+.around-card p { color: var(--ink-soft); font-size: var(--step--1); }
+
+/* What to bring */
+.check-list { margin-top: var(--space-2); display: flex; flex-direction: column; gap: 0.6rem; }
+.check-list li {
+  position: relative;
+  padding-left: 1.6rem;
+  color: var(--ink-soft);
+}
+.check-list li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.35rem;
+  width: 10px; height: 10px;
+  border: 1px solid var(--accent);
+  border-radius: 2px;
+}
 
 /* Notes / cost card */
 .cost-card {

@@ -4,6 +4,15 @@
  * Everything here reads from window.__WEDDING_BUNDLE__ (set by unlock.js).
  * setLanguage() re-renders in place, so switching EN/TR/DE never re-fetches
  * or re-decrypts anything — the whole bundle was already local.
+ *
+ * Event scoping: tools/build-invites.mjs prunes each guest's bundle to only
+ * the part(s) they're invited to *before* it's ever encrypted — a Denmark-
+ * only guest's decrypted bundle simply has no `content.*.where/when/how/...`
+ * keys and no `details.spain/airbnb/paypal`. applyEventScope() below trusts
+ * that pruning completely: it removes a section from the DOM whenever the
+ * content it would need isn't present, rather than keeping a second,
+ * separately-maintained list of "which sections belong to which event". One
+ * source of truth, so the two can't drift apart.
  */
 window.WeddingRender = (function () {
   "use strict";
@@ -46,18 +55,20 @@ window.WeddingRender = (function () {
   function buildCtx(lang) {
     var d = bundle.details;
     var c = bundle.content[lang];
-    var nights = nightsBetween(d.spain.checkin, d.spain.checkout);
+    var hasSpain = !!d.spain;
+    var hasDenmark = !!d.denmark;
+    var nights = hasSpain ? nightsBetween(d.spain.checkin, d.spain.checkout) : null;
     return {
       name: bundle.guest.name,
       partnerA: d.couple.partnerA,
       partnerB: d.couple.partnerB,
-      denmarkCity: d.denmark.city,
-      denmarkDate: d.denmark.date ? fmtDate(d.denmark.date, lang) : c.denmark.tbcLabel,
-      spainCity: d.spain.city,
-      checkin: fmtDate(d.spain.checkin, lang),
-      checkout: fmtDate(d.spain.checkout, lang),
-      nights: nights,
-      cost: fmtCost(d.spain.costPerPerson, d.spain.currency, lang),
+      denmarkCity: hasDenmark ? d.denmark.city : "",
+      denmarkDate: hasDenmark ? (d.denmark.date ? fmtDate(d.denmark.date, lang) : c.denmark.tbcLabel) : "",
+      spainCity: hasSpain ? d.spain.city : "",
+      checkin: hasSpain ? fmtDate(d.spain.checkin, lang) : "",
+      checkout: hasSpain ? fmtDate(d.spain.checkout, lang) : "",
+      nights: nights != null ? nights : "",
+      cost: hasSpain ? fmtCost(d.spain.costPerPerson, d.spain.currency, lang) : "",
       monogram: (d.couple.partnerA || "").charAt(0) + " & " + (d.couple.partnerB || "").charAt(0),
     };
   }
@@ -93,11 +104,15 @@ window.WeddingRender = (function () {
     });
   }
 
-  function renderStory(ctx, c) {
+  function renderIntro(ctx, c) {
+    var kicker = document.querySelector('[data-bind="intro.title"]');
+    var titleKey = bundle.guest.event === "b" ? "titleBoth" : bundle.guest.event === "s" ? "titleSpain" : "titleDenmark";
+    setText(kicker, t(c.intro[titleKey], ctx));
+
     var grid = document.getElementById("story-grid");
     grid.innerHTML = "";
     ["denmark", "spain"].forEach(function (key) {
-      var card = c.story[key];
+      var card = c.intro[key];
       if (!card) return;
       var div = document.createElement("div");
       div.className = "story-card";
@@ -112,6 +127,7 @@ window.WeddingRender = (function () {
   }
 
   function renderWhere(ctx, c) {
+    if (!c.where) return;
     var d = bundle.details;
     setText(document.querySelector('[data-bind="where.name"]'), d.airbnb.name || c.where.nameTBD);
     setText(document.querySelector('[data-bind="where.address"]'), d.airbnb.address || c.where.addressTBD);
@@ -131,6 +147,7 @@ window.WeddingRender = (function () {
   }
 
   function renderWhen(ctx, c) {
+    if (!c.when) return;
     var el = document.getElementById("when-dates");
     el.innerHTML = "";
     [
@@ -162,10 +179,9 @@ window.WeddingRender = (function () {
     el.appendChild(nightsDiv);
   }
 
-  function renderPlan(ctx, c) {
-    var ol = document.getElementById("plan-timeline");
+  function renderTimeline(ol, days, ctx) {
     ol.innerHTML = "";
-    (c.how.days || []).forEach(function (day) {
+    (days || []).forEach(function (day) {
       var li = document.createElement("li");
       li.className = "plan-item";
       var label = document.createElement("p");
@@ -184,19 +200,59 @@ window.WeddingRender = (function () {
     });
   }
 
-  function renderNotes(ctx) {
-    setText(document.getElementById("cost-amount"), ctx.cost);
+  function renderPlan(ctx, c) {
+    if (!c.how) return;
+    renderTimeline(document.getElementById("plan-timeline"), c.how.days, ctx);
+  }
+
+  function renderDenmarkDay(ctx, c) {
+    if (!c.denmarkDay) return;
+    renderTimeline(document.getElementById("denmark-day-timeline"), c.denmarkDay.steps, ctx);
+  }
+
+  function renderAround(ctx, c) {
+    if (!c.around) return;
+    var grid = document.getElementById("around-grid");
+    grid.innerHTML = "";
+    (c.around.items || []).forEach(function (item) {
+      var div = document.createElement("div");
+      div.className = "around-card";
+      var h3 = document.createElement("h3");
+      h3.textContent = t(item.title, ctx);
+      var p = document.createElement("p");
+      p.textContent = t(item.body, ctx);
+      div.appendChild(h3);
+      div.appendChild(p);
+      grid.appendChild(div);
+    });
+  }
+
+  function renderBring(ctx, c) {
+    if (!c.bring) return;
+    var list = document.getElementById("bring-list");
+    list.innerHTML = "";
+    (c.bring.list || []).forEach(function (item) {
+      var li = document.createElement("li");
+      li.textContent = t(item, ctx);
+      list.appendChild(li);
+    });
+  }
+
+  function renderNotes(ctx, c) {
+    if (!c.notes) return;
     var d = bundle.details;
+    setText(document.getElementById("cost-amount"), ctx.cost);
     var link = document.getElementById("paypal-link");
-    link.href = d.paypal.link;
+    if (d.paypal) link.href = d.paypal.link;
     var qrWrap = document.getElementById("qr-wrap");
-    qrWrap.innerHTML = d.paypal.qrSvg || "";
+    qrWrap.innerHTML = (d.paypal && d.paypal.qrSvg) || "";
   }
 
   function renderFaq(ctx, c) {
     var list = document.getElementById("faq-list");
     list.innerHTML = "";
-    (c.faq.items || []).forEach(function (item, i) {
+    var items = [].concat(c.faq.spain || [], c.faq.denmark || [], c.faq.shared || []);
+    items.forEach(function (item, i) {
       var wrap = document.createElement("div");
       wrap.className = "faq-item";
       var btn = document.createElement("button");
@@ -220,19 +276,57 @@ window.WeddingRender = (function () {
     if (window.WeddingMain) window.WeddingMain.bindFaq();
   }
 
-  function applyEventVisibility() {
-    var event = bundle.guest.event; // 's' | 'd' | 'b'
-    var showDenmark = event === "d" || event === "b";
-    var showSpain = event === "s" || event === "b";
+  function setPhoto(el, url) {
+    if (!el) return;
+    if (url) {
+      el.style.backgroundImage = "url('" + url + "')";
+      el.hidden = false;
+    } else {
+      el.hidden = true;
+    }
+  }
 
-    document.getElementById("denmark").hidden = !showDenmark;
-    document.getElementById("nav-li-denmark").hidden = !showDenmark;
-    // Where/When/How/Notes are all about the Spain getaway specifically —
-    // a Denmark-only guest has no reason to see the Airbnb, the day plan,
-    // or a request to pay their share of an accommodation cost.
-    ["where", "when", "how", "notes"].forEach(function (id) {
-      document.getElementById(id).hidden = !showSpain;
-      document.getElementById("nav-li-" + id).hidden = !showSpain;
+  function applyPhotos() {
+    var photos = (bundle.details && bundle.details.photos) || {};
+    setPhoto(document.getElementById("hero-photo"), photos.hero);
+    setPhoto(document.getElementById("where-photo"), photos.house);
+    setPhoto(document.getElementById("denmark-photo"), photos.denmark);
+    setPhoto(document.getElementById("around-photo"), photos.spain);
+    // Toggled on the section itself (rather than relying on :has() support)
+    // so the scrim + on-photo text colors only apply once there's actually
+    // a photo behind them.
+    document.getElementById("hero").classList.toggle("has-photo", !!photos.hero);
+  }
+
+  // Removes (not just hides) every section/nav-item whose content didn't
+  // survive the build-time prune for this guest's event. Runs once, before
+  // the first render — content structure doesn't change on a language
+  // switch, only its translated text does.
+  function applyEventScope() {
+    var c = bundle.content[bundle.guest.lang] || bundle.content.en;
+    var sectionForKey = {
+      denmark: "denmark",
+      denmarkDay: "denmark-day",
+      denmarkTravel: "denmark-travel",
+      where: "where",
+      when: "when",
+      how: "how",
+      around: "around",
+      bring: "bring",
+      notes: "notes",
+    };
+    Object.keys(sectionForKey).forEach(function (contentKey) {
+      var present = !!c[contentKey];
+      var sectionId = sectionForKey[contentKey];
+      var navId = "nav-li-" + contentKey;
+      var section = document.getElementById(sectionId);
+      var navLi = document.getElementById(navId);
+      if (!present) {
+        if (section) section.remove();
+        if (navLi) navLi.remove();
+      } else if (section) {
+        section.hidden = false;
+      }
     });
   }
 
@@ -243,19 +337,30 @@ window.WeddingRender = (function () {
     var ctx = buildCtx(lang);
 
     document.documentElement.lang = lang;
-
-    // hero greeting + event-specific lead line
-    var leadKey = { s: "leadSpain", d: "leadDenmark", b: "leadBoth" }[bundle.guest.event] || "leadBoth";
-    setText(document.querySelector('[data-bind="hero.greeting"]'), t(c.hero.greeting, ctx));
-    setText(document.querySelector('[data-bind="hero.lead"]'), t(c.hero[leadKey], ctx));
     setText(document.getElementById("nav-monogram"), ctx.monogram);
 
+    // bindPass runs first: it resolves data-bind="hero.eyebrow"/"hero.lead"
+    // against c.hero directly, which has no plain "eyebrow"/"lead" key
+    // (only the eyebrowSpain/eyebrowDenmark/eyebrowBoth and
+    // leadSpain/leadDenmark/leadBoth variants) — so it clears them to "".
+    // The event-specific overrides below MUST run after bindPass, the same
+    // order every other event-scoped renderer (renderIntro, etc.) already
+    // follows, or they'd be immediately blanked out again.
     bindPass(document.getElementById("app"), ctx, c);
-    renderStory(ctx, c);
+
+    var eyebrowKey = { s: "eyebrowSpain", d: "eyebrowDenmark", b: "eyebrowBoth" }[bundle.guest.event] || "eyebrowBoth";
+    var leadKey = { s: "leadSpain", d: "leadDenmark", b: "leadBoth" }[bundle.guest.event] || "leadBoth";
+    setText(document.querySelector('[data-bind="hero.eyebrow"]'), t(c.hero[eyebrowKey], ctx));
+    setText(document.querySelector('[data-bind="hero.lead"]'), t(c.hero[leadKey], ctx));
+
+    renderIntro(ctx, c);
     renderWhere(ctx, c);
     renderWhen(ctx, c);
     renderPlan(ctx, c);
-    renderNotes(ctx);
+    renderDenmarkDay(ctx, c);
+    renderAround(ctx, c);
+    renderBring(ctx, c);
+    renderNotes(ctx, c);
     renderFaq(ctx, c);
 
     if (window.WeddingI18n) window.WeddingI18n.markActive(lang);
@@ -263,7 +368,8 @@ window.WeddingRender = (function () {
 
   function init(b) {
     bundle = b;
-    applyEventVisibility();
+    applyEventScope();
+    applyPhotos();
     var startLang = (window.WeddingI18n && window.WeddingI18n.preferredLang(bundle.guest.lang)) || bundle.guest.lang || "en";
     setLanguage(startLang);
 

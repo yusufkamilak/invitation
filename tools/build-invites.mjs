@@ -30,7 +30,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const SITE_BASE = process.env.SITE_BASE || "https://yusufkamilak.github.io/wedding/";
+const SITE_BASE = process.env.SITE_BASE || "https://yusufkamilak.github.io/invitation/";
 
 const GUESTS_CSV = path.join(ROOT, "tools", "guests.csv");
 const LINKS_CSV = path.join(ROOT, "tools", "links.csv");

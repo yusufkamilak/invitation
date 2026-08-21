@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="referrer" content="no-referrer">
+<title>An Invitation</title>
+<meta name="description" content="A private invitation.">
+<link rel="stylesheet" href="css/style.css">
+<link rel="icon" href="data:,">
+</head>
+<body>
+
+  <!-- Loading state: shown immediately, replaced as soon as unlock.js resolves -->
+  <div id="loading" class="state-screen" aria-live="polite">
+    <div class="spinner" aria-hidden="true"></div>
+  </div>
+
+  <!-- Neutral fallback: shown for no link, a broken link, or any decrypt failure.
+       Deliberately reveals nothing about the wedding, the guests, or the events.
+       Shown before any content is decrypted, so we don't yet know the guest's
+       language — the message is given in all three languages at once. -->
+  <div id="fallback" class="state-screen" hidden>
+    <div class="fallback-card">
+      <p class="fallback-mark" aria-hidden="true">&#10022;</p>
+      <p class="fallback-line">This link isn't quite right. Please use the personal invitation link you were sent.</p>
+      <p class="fallback-line">Bu bağlantı doğru görünmüyor. Lütfen size gönderilen kişisel davet bağlantısını kullanın.</p>
+      <p class="fallback-line">Dieser Link scheint nicht zu stimmen. Bitte verwende den persönlichen Einladungslink, den du erhalten hast.</p>
+    </div>
+  </div>
+
+  <!-- Real content: rendered by render.js once a guest bundle is decrypted -->
+  <div id="app" hidden>
+
+    <nav id="site-nav" class="site-nav">
+      <div class="site-nav-inner">
+        <a href="#hero" class="site-nav-mark" aria-hidden="true">&#10022;</a>
+        <ul class="site-nav-links">
+          <li><a href="#where" data-i18n="nav.where">Where</a></li>
+          <li><a href="#when" data-i18n="nav.when">When</a></li>
+          <li><a href="#how" data-i18n="nav.how">How</a></li>
+          <li><a href="#notes" data-i18n="nav.notes">Notes</a></li>
+          <li><a href="#rsvp" data-i18n="nav.rsvp">RSVP</a></li>
+          <li><a href="#faq" data-i18n="nav.faq">FAQ</a></li>
+        </ul>
+        <div class="lang-switch" id="lang-switch" role="group" aria-label="Language">
+          <button type="button" data-lang="en">EN</button>
+          <button type="button" data-lang="tr">TR</button>
+          <button type="button" data-lang="de">DE</button>
+        </div>
+      </div>
+    </nav>
+
+    <main>
+
+      <section id="hero" class="section hero">
+        <p class="hero-eyebrow" data-bind="hero.eyebrow"></p>
+        <h1 class="hero-greeting" data-bind="hero.greeting"></h1>
+        <p class="hero-lead" data-bind="hero.lead"></p>
+        <div class="hero-meta">
+          <div class="hero-countdown" id="countdown" aria-live="off">
+            <span class="countdown-num" id="cd-days">–</span>
+            <span class="countdown-label" data-i18n="hero.countdownLabel">days to go</span>
+          </div>
+        </div>
+        <a class="scroll-cue" href="#story" data-i18n="hero.scrollCue" aria-label="Scroll down"></a>
+      </section>
+
+      <section id="story" class="section story">
+        <h2 class="section-kicker" data-bind="story.title"></h2>
+        <div class="story-grid" id="story-grid"><!-- populated by render.js --></div>
+      </section>
+
+      <section id="denmark" class="section denmark" hidden>
+        <h2 class="section-kicker" data-i18n="nav.denmark">Denmark</h2>
+        <h3 class="section-title" data-bind="denmark.title"></h3>
+        <p class="section-sub" data-bind="denmark.dateLine"></p>
+        <p class="section-body" data-bind="denmark.body"></p>
+      </section>
+
+      <section id="where" class="section">
+        <h2 class="section-kicker" data-i18n="nav.where">Where</h2>
+        <h3 class="section-title" data-bind="where.name"></h3>
+        <p class="section-sub" data-bind="where.address"></p>
+        <p class="section-body" data-bind="where.body"></p>
+        <ul class="tag-list" id="where-amenities"><!-- populated by render.js --></ul>
+        <div class="button-row">
+          <a class="btn btn-line" id="where-listing" href="#" target="_blank" rel="noopener" data-bind-text="where.listingLabel"></a>
+          <a class="btn btn-line" id="where-map" href="#" target="_blank" rel="noopener" data-bind-text="where.mapLabel"></a>
+        </div>
+      </section>
+
+      <section id="when" class="section">
+        <h2 class="section-kicker" data-i18n="nav.when">When</h2>
+        <div class="when-dates" id="when-dates"><!-- populated by render.js --></div>
+        <p class="section-body" data-bind="when.note"></p>
+      </section>
+
+      <section id="how" class="section">
+        <h2 class="section-kicker" data-i18n="nav.how">How</h2>
+        <p class="section-sub" data-bind="how.subtitle"></p>
+        <ol class="plan-timeline" id="plan-timeline"><!-- populated by render.js --></ol>
+      </section>
+
+      <section id="notes" class="section notes">
+        <h2 class="section-kicker" data-i18n="nav.notes">Notes</h2>
+        <p class="section-body" data-bind="notes.transportNote"></p>
+        <div class="cost-card">
+          <p class="cost-amount" id="cost-amount"></p>
+          <p class="cost-body" data-bind="notes.costBody"></p>
+          <div class="pay-row">
+            <a class="btn btn-solid" id="paypal-link" href="#" target="_blank" rel="noopener" data-bind-text="notes.paypalLabel"></a>
+            <div class="qr-wrap" id="qr-wrap" aria-hidden="true"></div>
+          </div>
+          <p class="cost-fineprint" data-bind="notes.paypalNote"></p>
+          <p class="cost-fineprint" data-bind="notes.cashNote"></p>
+        </div>
+      </section>
+
+      <section id="rsvp" class="section rsvp">
+        <h2 class="section-kicker" data-i18n="nav.rsvp">RSVP</h2>
+        <h3 class="section-title" data-bind="rsvp.title"></h3>
+        <p class="section-sub" data-bind="rsvp.subtitle"></p>
+
+        <form id="rsvp-form" class="form" novalidate>
+          <div class="field-group attending-group" role="radiogroup" id="attending-group">
+            <label class="attending-option">
+              <input type="radio" name="attending" value="yes" required>
+              <span data-bind-text="rsvp.yes"></span>
+            </label>
+            <label class="attending-option">
+              <input type="radio" name="attending" value="no" required>
+              <span data-bind-text="rsvp.no"></span>
+            </label>
+          </div>
+
+          <div class="field">
+            <label for="rsvp-dietary" data-bind-text="rsvp.dietaryLabel"></label>
+            <input type="text" id="rsvp-dietary" name="dietary" autocomplete="off">
+          </div>
+
+          <div class="field">
+            <label for="rsvp-message" data-bind-text="rsvp.messageLabel"></label>
+            <textarea id="rsvp-message" name="message" rows="3" data-bind-attr-placeholder="rsvp.messagePlaceholder"></textarea>
+          </div>
+
+          <!-- honeypot: hidden from real guests, real users never fill this in -->
+          <div class="hp-field" aria-hidden="true">
+            <label for="rsvp-website">Website</label>
+            <input type="text" id="rsvp-website" name="website" tabindex="-1" autocomplete="off">
+          </div>
+
+          <button type="submit" class="btn btn-solid" data-bind-text="rsvp.submit"></button>
+
+          <p class="form-status" id="rsvp-status" role="status" aria-live="polite" hidden></p>
+        </form>
+      </section>
+
+      <section id="questions" class="section">
+        <h2 class="section-kicker" data-i18n="nav.questions">Questions</h2>
+        <h3 class="section-title" data-bind="questions.title"></h3>
+        <p class="section-sub" data-bind="questions.subtitle"></p>
+
+        <form id="question-form" class="form" novalidate>
+          <div class="field">
+            <label for="question-text" class="sr-only" data-bind-text="questions.title"></label>
+            <textarea id="question-text" name="message" rows="3" required data-bind-attr-placeholder="questions.placeholder"></textarea>
+          </div>
+          <div class="hp-field" aria-hidden="true">
+            <label for="question-website">Website</label>
+            <input type="text" id="question-website" name="website" tabindex="-1" autocomplete="off">
+          </div>
+          <button type="submit" class="btn btn-line" data-bind-text="questions.submit"></button>
+          <p class="form-status" id="question-status" role="status" aria-live="polite" hidden></p>
+        </form>
+      </section>
+
+      <section id="faq" class="section faq">
+        <h2 class="section-kicker" data-i18n="nav.faq">FAQ</h2>
+        <div class="faq-list" id="faq-list"><!-- populated by render.js --></div>
+      </section>
+
+      <footer class="site-footer">
+        <p data-bind="footer.note"></p>
+      </footer>
+
+    </main>
+  </div>
+
+  <script src="js/config.js" defer></script>
+  <script src="js/render.js" defer></script>
+  <script src="js/i18n.js" defer></script>
+  <script src="js/main.js" defer></script>
+  <script src="js/unlock.js" defer></script>
+</body>
+</html>

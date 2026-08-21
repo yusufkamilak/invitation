@@ -1,0 +1,13 @@
+{
+  "name": "wedding-site-tools",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Build-time tooling only — the deployed site has zero runtime dependencies.",
+  "type": "module",
+  "scripts": {
+    "build": "node tools/make-qr.mjs && node tools/build-invites.mjs"
+  },
+  "devDependencies": {
+    "qrcode": "^1.5.4"
+  }
+}

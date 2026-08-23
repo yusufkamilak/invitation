@@ -18,10 +18,11 @@
  *   - It is only ever held over a letter that fits the screen. Longer copy
  *     on a short phone pushes the letter past one screen, and locking that
  *     would put the sign-off somewhere the guest cannot reach.
- *   - It only starts listening once the letter has finished arriving
- *     (the `letter:done` event from js/letter.js). js/letter.js binds the
- *     same gestures to skip the sequence, and one flick must not both skip
- *     the letter and page off it.
+ *   - It only starts *acting* on a gesture once the letter has finished
+ *     arriving (the `letter:done` event from js/letter.js). js/letter.js
+ *     binds the same gestures to skip the sequence, and one flick must not
+ *     both skip the letter and page off it. Holding the page still starts
+ *     immediately; only the snap waits.
  */
 window.WeddingPaging = (function () {
   "use strict";
@@ -32,6 +33,7 @@ window.WeddingPaging = (function () {
   var SWIPE_PX = 24;
 
   var locked = false;
+  var armed = false;
   var spent = false;
   var touchY = null;
   var unbinders = [];
@@ -116,23 +118,28 @@ window.WeddingPaging = (function () {
     window.setTimeout(release, 1200);
   }
 
-  function bindTriggers() {
-    on(window, "wheel", function (e) {
-      if (e.deltaY > 0) go();
-    }, { passive: true });
-
+  // Bound for the whole locked period, not just once armed, and this is
+  // what actually holds the letter still on iOS. overflow: hidden on the
+  // root is a real lock on every desktop engine and on Android, but iOS
+  // Safari drags the page anyway; cancelling the first touchmove of a
+  // gesture is the only thing that reliably stops it there, and it also
+  // stops the swipe that pages down from flinging past the card afterwards.
+  function bindTouchHold() {
     on(window, "touchstart", function (e) {
       touchY = e.touches && e.touches.length ? e.touches[0].clientY : null;
     }, { passive: true });
 
-    // Not passive, and it prevents default: once the first touchmove of a
-    // gesture is cancelled the browser will not scroll for the rest of it,
-    // so the swipe that asks to page down cannot also fling the page.
     on(window, "touchmove", function (e) {
-      if (touchY === null || !e.touches || !e.touches.length) return;
+      if (!locked || touchY === null || !e.touches || !e.touches.length) return;
       if (e.cancelable) e.preventDefault();
-      if (touchY - e.touches[0].clientY > SWIPE_PX) go();
+      if (armed && touchY - e.touches[0].clientY > SWIPE_PX) go();
     }, { passive: false });
+  }
+
+  function bindTriggers() {
+    on(window, "wheel", function (e) {
+      if (e.deltaY > 0) go();
+    }, { passive: true });
 
     on(window, "keydown", function (e) {
       if (e.key === "ArrowDown" || e.key === "PageDown" || e.key === "End" ||
@@ -173,7 +180,8 @@ window.WeddingPaging = (function () {
   function start() {
     if (spent || !el("card") || !el("letter")) return;
     setLock(true);
-    // Bound for the whole locked period, not just once armed: a rotate can
+    bindTouchHold();
+    // Bound for the whole locked period too: a rotate can
     // turn a letter that fit into one that does not, and nothing is worth
     // snapping at that point. Hand the page back instead.
     on(window, "resize", function () {
@@ -185,6 +193,7 @@ window.WeddingPaging = (function () {
   function arm() {
     if (spent) return;
     if (!fitsOneScreen()) return standDown();
+    armed = true;
     bindTriggers();
   }
 

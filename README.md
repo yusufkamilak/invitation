@@ -89,18 +89,26 @@ anything identifying (e.g. a recognisable venue) in a gated photo slot.
 2. Run:
    ```
    npm install        # first time only
-   npm run build       # regenerates QR + all guest bundles
+   npm run build       # QR + all guest bundles + the cache stamps
    ```
 3. Check `tools/links.csv` for the guest's link (new or unchanged for
    existing guests — re-running never breaks a link already sent out).
-4. Commit and push `d/*.bin` (and nothing else — everything else is
-   gitignored):
+4. Commit and push `d/*.bin`, plus `index.html` if the build restamped it
+   (nothing else — the rest is gitignored):
    ```
-   git add d/
+   git add d/ index.html
    git commit -m "Update guest bundles"
    git push
    ```
    GitHub Pages redeploys automatically, usually within a minute.
+
+**If you touched anything under `css/` or `js/`, re-stamp before you push:**
+```
+npm run stamp
+```
+`npm run build` does it for you, but that build is about guest bundles and
+you may not have needed to run it. See "Cache stamps" below for why this is
+not optional.
 
 `guests.csv` format — plain values only, no commas inside a field:
 ```
@@ -192,6 +200,32 @@ Google now serves these as variable fonts, so asking for two weights
 returns two `@font-face` blocks pointing at the *same* file. The script
 groups faces by URL and emits each one once with a weight range; without
 that it inlines every byte twice and the file doubles.
+
+## Cache stamps
+
+GitHub Pages serves everything with `Cache-Control: max-age=600` and gives
+you no other handle on it. The guest bundles are fine — `js/unlock.js`
+fetches them with `cache: "no-store"`, so the words are always current.
+Nothing else was, and the failure mode is a quiet one: a browser holding an
+old `css/style.css` while a fresh bundle arrives over the wire renders the
+new copy in the old design, which reads as a half-finished deploy rather
+than as a cache. Safari held them far longer than Chrome did.
+
+`tools/stamp-assets.mjs` rewrites every stylesheet and script reference in
+`index.html` to carry a content hash:
+
+```
+<link rel="stylesheet" href="css/style.css?v=76e02f48">
+```
+
+The URL changes when the file does, so the stale entry is never consulted
+again. It runs as the last step of `npm run build`, or on its own with
+`npm run stamp`, and it is idempotent: on unchanged files it leaves
+`index.html` byte-identical. Commit the result.
+
+`index.html` itself is still cached for up to ten minutes and there is no
+way to say otherwise on Pages. That is the floor for how stale a returning
+guest can be, and it heals itself.
 
 ## Revoking a guest
 

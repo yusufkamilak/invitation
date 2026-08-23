@@ -1,26 +1,30 @@
 /*
- * letter.js — the writing sequence on the letter the envelope opens into.
+ * letter.js — the entrance sequence on the letter the envelope opens into.
  *
  * play() is called by render.js at the hand-off, the moment the grown
  * envelope has been swapped for the real #letter underneath it. Four beats,
- * in order: the title writes itself on, the body appears, the sign-off and
- * the names write themselves on, then the scroll hint fades up.
+ * in order: the title fades up, the body follows, then the sign-off and the
+ * names, then the scroll hint.
  *
- * The stagger between lines is pure CSS (animation-delay off a --i custom
- * property, see .letter .ink in style.css). This file only advances between
+ * The stagger inside a beat is pure CSS (transition-delay off a --i custom
+ * property, see .letter .ln in style.css). This file only advances between
  * the four beats, so there is one place that owns timing rather than two
  * that can drift apart.
  *
- * Every wait is an animationend/transitionend listener with a timer behind
- * it. The event is what actually drives the chain; the timer exists because
- * a transition whose value never really changes fires no event at all, and
- * a guest stuck on a half-written letter has no way out.
+ * Every wait is a transitionend listener with a timer behind it. The event
+ * is what actually drives the chain; the timer exists because a transition
+ * whose value never really changes fires no event at all, and a guest stuck
+ * on a half-shown letter has no way out.
+ *
+ * When the last beat lands, or the guest skips to it, a `letter:done` event
+ * is dispatched on document. js/paging.js waits on it before arming.
  */
 window.WeddingLetter = (function () {
   "use strict";
 
   var done = false;
   var started = false;
+  var announced = false;
   var timers = [];
 
   function el(id) {
@@ -48,28 +52,30 @@ window.WeddingLetter = (function () {
     timers.push(window.setTimeout(go, ms));
   }
 
-  // The last line of a block is the one whose animation ending means the
-  // whole block has been written.
+  // The last line of a block is the one whose transition ending means the
+  // whole block has arrived: it carries the longest --i delay.
   function lastLine(container) {
-    var inks = container.querySelectorAll(".ink");
-    return inks.length ? inks[inks.length - 1] : container;
+    var lines = container.querySelectorAll(".ln");
+    return lines.length ? lines[lines.length - 1] : container;
   }
 
   // How long the staggered lines in a block take, worst case. Read off the
-  // CSS rather than hard-coded here so the two cannot disagree.
+  // CSS rather than hard-coded here so the two cannot disagree. Only
+  // meaningful once the beat's class is on the letter, since that is what
+  // puts the delay on the line.
   function blockMs(container) {
-    var inks = container.querySelectorAll(".ink");
-    if (!inks.length) return 0;
-    var style = window.getComputedStyle(inks[inks.length - 1]);
-    var dur = parseFloat(style.animationDuration) || 0;
-    var delay = parseFloat(style.animationDelay) || 0;
+    var lines = container.querySelectorAll(".ln");
+    if (!lines.length) return 0;
+    var style = window.getComputedStyle(lines[lines.length - 1]);
+    var dur = parseFloat(style.transitionDuration) || 0;
+    var delay = parseFloat(style.transitionDelay) || 0;
     return (dur + delay) * 1000;
   }
 
-  // Sacramento is the whole point of the effect, so writing in a fallback
-  // face and reflowing mid-animation would be worse than a short wait. The
-  // timeout is the important half: a font that never arrives must not
-  // strand the guest on a blank page.
+  // The letter is set in two faces the rest of the site does not use, and
+  // fading a line up in a fallback face only to reflow it mid-beat is worse
+  // than a short wait. The timeout is the important half: a font that never
+  // arrives must not strand the guest on a blank page.
   function whenFontsReady(cb) {
     var called = false;
     function go() {
@@ -87,17 +93,26 @@ window.WeddingLetter = (function () {
     var title = el("letter-title");
     var text = title ? title.textContent : "";
     Promise.all([
-      document.fonts.load("1em Sacramento", text),
-      document.fonts.load("300 1em 'Cormorant Garamond'"),
+      document.fonts.load("1em 'Ms Madi'", text),
+      document.fonts.load("1em Alegreya"),
     ]).then(function () {
       window.clearTimeout(timer);
       go();
     }, go);
   }
 
-  // Jump to the end: every line written, everything visible, nothing
-  // animating. Used by the skip, by reduced motion, and by a language
-  // switch that rebuilds the lines after the guest has already watched it.
+  // Announced once, whichever way the letter got to the end. paging.js
+  // arms on this: without it, the same flick that skips the sequence would
+  // also page the guest off the letter they just asked to see.
+  function announceDone() {
+    if (announced) return;
+    announced = true;
+    document.dispatchEvent(new CustomEvent("letter:done"));
+  }
+
+  // Jump to the end: every line shown, nothing transitioning. Used by the
+  // skip, by reduced motion, and by a language switch that rebuilds the
+  // lines after the guest has already watched them arrive.
   function finish() {
     var letter = el("letter");
     if (!letter) return;
@@ -106,6 +121,7 @@ window.WeddingLetter = (function () {
     timers = [];
     letter.classList.add("is-done");
     letter.classList.remove("is-writing", "is-body-in", "is-signing", "is-hinting");
+    announceDone();
   }
 
   function bindSkip() {
@@ -147,7 +163,7 @@ window.WeddingLetter = (function () {
 
       letter.classList.add("is-writing");
 
-      after(lastLine(title), "animationend", blockMs(title) + 250, function () {
+      after(lastLine(title), "transitionend", blockMs(title) + 250, function () {
         letter.classList.add("is-body-in");
 
         // The last paragraph, not the block: the paragraphs are staggered,
@@ -156,9 +172,10 @@ window.WeddingLetter = (function () {
         after(body.lastElementChild || body, "transitionend", 1600, function () {
           letter.classList.add("is-signing");
 
-          after(lastLine(names), "animationend", blockMs(names) + 900, function () {
+          after(lastLine(names), "transitionend", blockMs(names) + 900, function () {
             letter.classList.add("is-hinting");
             done = true;
+            announceDone();
           });
         });
       });

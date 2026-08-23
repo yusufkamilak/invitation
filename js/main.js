@@ -68,9 +68,11 @@ window.WeddingMain = (function () {
   }
 
   // ---------------------------------------------------------------
-  // The language switch is fixed over whatever is behind it, and the
-  // letter is cream while everything below it is green. Ivory on gold is
-  // close to invisible on cream, so track which surface it is over.
+  // The language switch is fixed over whatever is behind it, and it is
+  // hidden entirely while that is the letter: a floating control over the
+  // paper breaks the only illusion the first screen has. This tracks which
+  // surface it is over; the hiding itself is the .over-letter rule in
+  // css/style.css.
   // ---------------------------------------------------------------
   function initSurfaceWatch() {
     var letter = document.getElementById("letter");
@@ -89,8 +91,17 @@ window.WeddingMain = (function () {
       },
       // The switch sits in the top corner, so what matters is whether the
       // letter still reaches the top of the screen, not whether any part of
-      // it is visible at all.
-      { rootMargin: "0px 0px -70% 0px", threshold: [0, 0.05, 0.25, 0.5, 0.9] }
+      // it is visible at all. On the way down that means it fades in as the
+      // snap in js/paging.js carries the guest onto the card.
+      //
+      // The -2px at the top is what makes that snap work. It lands the guest
+      // at exactly one viewport, where the letter's bottom edge would sit
+      // precisely on the band's top edge. An observer notifies on threshold
+      // crossings, and a ratio falling from 0.05 to a grazing 0 crosses
+      // nothing, so no entry is delivered at all and the guard below never
+      // gets to run. Pulling the band off the edge by two pixels turns that
+      // graze into a clean miss, which does notify.
+      { rootMargin: "-2px 0px -70% 0px", threshold: [0, 0.05, 0.25, 0.5, 0.9] }
     );
     io.observe(letter);
   }

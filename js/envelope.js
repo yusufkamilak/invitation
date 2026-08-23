@@ -8,11 +8,15 @@
  *
  * Tapping it runs one continuous gesture: the paper turns over, and part
  * way through the turn it starts growing until it covers exactly the box
- * #letter occupies. By the end it is a blank cream rectangle sitting on top
- * of an identical blank cream rectangle, so the overlay can simply be
+ * .letter-paper occupies. By the end it is a blank cream rectangle sitting
+ * on top of an identical blank cream rectangle, so the overlay can simply be
  * hidden. No cross-fade: two identical opaque rectangles only fade
  * invisibly if the lower one is already fully painted, and a hard swap has
  * no such precondition.
+ *
+ * The overlay's own beige and the beige around .letter-paper are the same
+ * gradient, so the surround does not have to be matched frame by frame: it
+ * is already the same picture before and after the swap.
  *
  * The growth has to be measured in JS. .env-paper is sized
  * `min(84vw, 24rem)` with `max-height: 60svh` and `aspect-ratio: 3/2`, so
@@ -28,9 +32,11 @@ window.WeddingEnvelope = (function () {
   // lands on a face that is still steeply foreshortened.
   var GROW_START_MS = 460;
   var GROW_MS = 700;
-  // A couple of pixels of overshoot, so a fractional scale never leaves a
-  // hairline of the beige overlay showing along an edge of the letter.
-  var BLEED = 2;
+  // No overshoot. It used to be 2px, to stop a fractional scale leaving a
+  // hairline of beige along an edge of a full-bleed letter. The letter has
+  // visible margins now, so the same overshoot would instead make the card
+  // jump 2px smaller at the swap, against an edge the guest can see.
+  var BLEED = 0;
 
   function prefersReducedMotion() {
     return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -40,7 +46,10 @@ window.WeddingEnvelope = (function () {
     var el = document.getElementById("envelope");
     var paper = document.getElementById("env-paper");
     var grow = document.getElementById("env-grow");
-    var letter = document.getElementById("letter");
+    // The paper, not the section: the section is a full screen of beige
+    // with the paper inset in it, and growing to the section would put the
+    // cream back out to the edges the inset exists to create.
+    var letter = document.getElementById("letter-paper");
     var to = document.getElementById("env-to");
     // Not auto-focused: a programmatic focus paints the focus ring on every
     // load, which reads as a permanent border rather than a focus state. The
@@ -82,7 +91,7 @@ window.WeddingEnvelope = (function () {
       // Measure the destination element, not the viewport. On iOS a
       // position: fixed overlay is sized to the *large* viewport while
       // #letter's 100svh is the small one, and they differ by the height of
-      // the address bar.
+      // the address bar. The inset paper makes this more true, not less.
       var from = paper.getBoundingClientRect();
       var target = letter.getBoundingClientRect();
 
@@ -134,10 +143,12 @@ window.WeddingEnvelope = (function () {
     });
   }
 
-  // The hand-off. The scroll lock comes off here rather than when the
-  // writing finishes: holding a guest still for several seconds on a page
-  // that visibly continues below is the thing most likely to read as
-  // broken, and they are free to leave the letter unread if they want to.
+  // The hand-off. The sealed lock comes off here, and js/paging.js takes
+  // its own in the same frame (render.js calls WeddingPaging.start() from
+  // onOpen below). That is not the guest being held still: the letter is
+  // one page rather than the top of a scroll, and the first gesture in any
+  // modality releases it and snaps to the card. A letter too tall to fit
+  // the screen is never locked at all; see js/paging.js.
   function handOver(el, onOpen) {
     if (el) el.hidden = true;
     document.documentElement.classList.remove("is-sealed");
@@ -149,9 +160,8 @@ window.WeddingEnvelope = (function () {
     document.body.classList.add("over-letter");
 
     // Focus has to be moved deliberately. #env-paper was the only focusable
-    // thing while sealed, so hiding it drops focus to <body> and the next
-    // Tab lands on the language switch, silently scrolling the guest past
-    // the letter they have not read yet.
+    // thing while sealed, so hiding it drops focus to <body>, and the next
+    // Tab would jump straight into the green page below.
     var letter = document.getElementById("letter");
     if (letter) letter.focus({ preventScroll: true });
 

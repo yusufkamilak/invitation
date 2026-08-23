@@ -27,14 +27,14 @@
   --error:      #e0a5a5;
 
   --serif: "Playfair Display", Georgia, "Iowan Old Style", "Times New Roman", serif;
-  /* The letter only. Cormorant is a light old-style face that reads as
-     printed stationery next to the handwriting, which Playfair, doing the
-     headline work on the green page, does not. */
-  --serif-body: "Cormorant Garamond", Georgia, "Iowan Old Style", serif;
-  /* The handwriting on the letter: title and names. Monoline and joined,
-     which is what lets a left-to-right reveal read as a pen laying ink
-     rather than text appearing. */
-  --script: "Sacramento", "Snell Roundhand", cursive;
+  /* The letter only. A warm literary serif, so the letter reads as something
+     written to be read rather than as more of the green page's display type,
+     which is Playfair's job. Stands in for 29LT Riwaya Informal; see the
+     comment on FAMILIES in tools/make-fonts.mjs for why it is a stand-in. */
+  --serif-body: "Alegreya", Georgia, "Iowan Old Style", serif;
+  /* The script on the letter: title and names. Stands in for Brittany
+     Signature, on the same terms. */
+  --script: "Ms Madi", "Snell Roundhand", cursive;
   --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 
   --step--1: clamp(0.83rem, 0.8rem + 0.15vw, 0.92rem);
@@ -79,10 +79,13 @@ body {
   line-height: 1.65;
   -webkit-font-smoothing: antialiased;
 }
-/* While the envelope is still sealed the page behind it must not scroll. */
-/* Set on <html> as well as <body>: body alone does not reliably stop the
-   scroll when <html> is the scrolling element. */
-.is-sealed { overflow: hidden; }
+/* Two scroll locks, both set on <html> as well as <body>: body alone does
+   not reliably stop the scroll when <html> is the scrolling element.
+   .is-sealed  the page behind the unopened envelope must not scroll.
+   .is-paged   the letter is one page, not the top of a long scroll. The
+               first gesture in any modality releases this and snaps to the
+               card; after that scrolling is free. See js/paging.js. */
+.is-sealed, .is-paged { overflow: hidden; }
 h1, h2, h3 { font-family: var(--serif); font-weight: 400; margin: 0; }
 p { margin: 0; }
 ul, ol { margin: 0; padding: 0; list-style: none; }
@@ -300,14 +303,34 @@ input, textarea { font: inherit; color: inherit; }
    rhythm and must not be picked up by the reveal observer or the
    scroll-cue lookup, both of which select on .section.
 
-   The writing is a clip-path wipe across live text rather than a
-   traced SVG stroke: the title carries the guest's name, so there
-   are sixteen of them across three languages and no fixed path
-   data would cover it. clip-path over mask-image because inset()
-   is composited in both engines, where mask animations repaint on
-   the main thread.
+   Two elements, and the split carries weight:
+
+     .letter        the stage. One screen, padded, and painted with
+                    the *same* beige gradient as the envelope overlay
+                    that sits above it, so the growing card lands on
+                    the ground it took off from and the hand-off is
+                    still invisible.
+     .letter-paper  the paper itself, and what js/envelope.js measures
+                    and grows into. Inset on every side: a cream
+                    rectangle bled to the viewport reads as a screen,
+                    the same rectangle with a margin reads as a letter.
+
+   Everything on it fades up. There was a clip-path wipe with a pen
+   tip drawing each line on; it was too much next to copy this plain,
+   and a script face's swashes fought the clip.
    ============================================================ */
 .letter {
+  /* Side margins answer to the width, the vertical rhythm to the height.
+     The letter is one page and has to fit one screen, or js/paging.js gives
+     up and leaves it scrolling; a 1440x740 laptop has room to spare across
+     and almost none down, so every vertical measure below is capped in vh.
+     Type included: a 64px title is right on a tall screen and is simply
+     more than a short one has to spend. Every one of those caps has a floor
+     under it, though: past a point the honest answer is that the letter
+     does not fit, and js/paging.js hands the guest an ordinary scrolling
+     page rather than shrinking the writing until it does. */
+  --letter-pad-x: clamp(1.25rem, 4.5vw, 3rem);
+  --letter-pad-y: clamp(0.9rem, 3vh, 3rem);
   position: relative;
   /* svh, never dvh: dvh would resize the letter continuously as the
      address bar retracts mid-scroll. min-height, never height, so longer
@@ -317,33 +340,60 @@ input, textarea { font: inherit; color: inherit; }
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  /* The hint is fixed to the foot of the viewport and the language switch
-     to the head, so both are out of flow. The padding is what keeps the
-     writing from running underneath either of them. */
-  padding: var(--space-5) var(--space-3);
-  background: var(--cream);
+  padding: var(--letter-pad-y) var(--letter-pad-x);
+  background: radial-gradient(120% 90% at 50% 30%, #f6efe3 0%, var(--beige) 45%, #e2d5bd 100%);
   color: var(--ink);
-  overflow: hidden;
 }
 .letter:focus { outline: none; }
+
+.letter-paper {
+  position: relative;
+  /* flex: 1 fills the padded box, so on a normal screen the paper is one
+     screen less its margins. Nothing caps its height, so a long German
+     letter grows the paper and the section under it instead of spilling. */
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 44rem;
+  padding: clamp(1.1rem, 3.5vh, 3rem) clamp(1rem, 5vw, 3rem);
+  background: var(--cream);
+  border-radius: 3px;
+  box-shadow: 0 18px 45px -18px rgba(70, 52, 26, 0.45), 0 2px 6px rgba(70, 52, 26, 0.12);
+}
 
 /* Watercolours from the printed card, one per corner. Three paintings,
    the sprig used twice at different angles. Placed in the corners rather
    than baked into one landscape backdrop so they still frame the text on
-   a portrait phone. */
-.letter-flora { position: absolute; inset: 0; pointer-events: none; }
+   a portrait phone.
+
+   The overflow lives on this layer and nowhere else. It used to sit on
+   .letter, which meant the same rule that cropped the flowers also cut
+   the tails off any descender that reached the edge. */
+.letter-flora {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
 .letter-flora .fl {
   position: absolute;
   background-repeat: no-repeat;
   background-size: contain;
 }
-/* Rotated about the corner they hang from, not their own centre, so
+/* Sized against the paper, not the viewport: the paper is no longer the
+   full screen, so a vw width would swell to a third of it on a desktop.
+   Rotated about the corner they hang from, not their own centre, so
    changing a size or an angle does not also walk the piece off the edge. */
 .fl-tl {
   top: -2%;
   left: -3%;
-  width: min(30vw, 12rem);
-  height: min(46vw, 19rem);
+  width: min(26%, 10rem);
+  aspect-ratio: 12 / 19;
   background-image: url("../assets/fl-sprig.webp");
   transform-origin: top left;
   transform: rotate(188deg) translate(-96%, -92%);
@@ -354,8 +404,8 @@ input, textarea { font: inherit; color: inherit; }
 .fl-tr {
   top: 1%;
   right: 0;
-  width: min(24vw, 9.5rem);
-  height: min(42vw, 17rem);
+  width: min(21%, 8rem);
+  aspect-ratio: 9.5 / 17;
   background-image: url("../assets/fl-stem.webp");
   transform-origin: top right;
   transform: rotate(-14deg);
@@ -363,15 +413,15 @@ input, textarea { font: inherit; color: inherit; }
 .fl-bl {
   bottom: -6%;
   left: -8%;
-  width: min(40vw, 15rem);
-  height: min(36vw, 14rem);
+  width: min(33%, 12rem);
+  aspect-ratio: 15 / 14;
   background-image: url("../assets/fl-poppy.webp");
 }
 .fl-br {
   right: -2%;
   bottom: -2%;
-  width: min(28vw, 11rem);
-  height: min(44vw, 18rem);
+  width: min(23%, 9rem);
+  aspect-ratio: 11 / 18;
   background-image: url("../assets/fl-sprig.webp");
   transform-origin: bottom right;
   transform: rotate(-40deg);
@@ -379,85 +429,55 @@ input, textarea { font: inherit; color: inherit; }
 
 .letter-inner {
   position: relative;
+  /* Explicit, not left to paint order: a corner piece reaching this far in
+     has to pass behind the writing, never over it. */
+  z-index: 1;
   width: 100%;
   max-width: 34rem;
-  margin: auto 0;
   text-align: center;
 }
 
 .letter-title {
   font-family: var(--script);
   font-weight: 400;
-  font-size: clamp(2.6rem, 1.5rem + 5vw, 4.6rem);
-  line-height: 1.05;
+  font-size: max(1.65rem, min(clamp(2.4rem, 1.35rem + 4.6vw, 4rem), 6vh));
+  /* Room for the script's descenders and swashes. 1.05 was tuned for a
+     compact face and lets one line's tails run into the line below. */
+  line-height: 1.22;
   color: var(--ink);
-  margin-bottom: var(--space-3);
+  margin-bottom: clamp(0.9rem, 2.5vh, 1.75rem);
 }
 
-/* .ln is the line box, .ink is what gets clipped open.
-   width: fit-content matters more than it looks: inset() percentages
-   resolve against the border box, so a full-width centred line would
-   spend the first fifth of the wipe crossing empty space with nothing
-   appearing. */
+/* .ln is one authored line, and the unit the stagger counts in. Lines are
+   authored in content/*.json rather than measured and split at runtime;
+   see the comment on writtenLine() in js/render.js for why. */
 .letter .ln {
   display: block;
   width: fit-content;
   margin-inline: auto;
-  position: relative;
-  /* Sacramento's swashes and descenders run past the em box; without the
-     padding the wipe shaves their tails. */
-  padding: 0 0.12em 0.08em;
-}
-.letter .ink {
-  display: inline-block;
-  clip-path: inset(0 100% 0 0);
-}
-.letter.is-done .ink { clip-path: inset(0); animation: none; }
-
-/* linear, not var(--ease). A pen moves at a constant speed; the site's
-   ease-out would slam the wipe open and then crawl, which is the whole
-   difference between handwriting and a CSS transition.
-   `both` with the start state declared on .ink itself, so there is never a
-   frame of unclipped text: Safari has flashed full text for one frame on
-   clip-path animations under the -webkit-font-smoothing set on body. */
-@keyframes write { to { clip-path: inset(0); } }
-
-.letter.is-writing .letter-title .ink {
-  animation: write 900ms linear both;
-  animation-delay: calc(var(--i, 0) * 620ms);
-}
-
-/* The pen tip. It rides .ln, not .ink, because .ink's own clip-path would
-   clip it away. Identical duration, delay and timing function, so the two
-   stay frame-synced without any JS keeping them in step. */
-.letter .ln::after {
-  content: "";
-  position: absolute;
-  top: 0.12em;
-  bottom: 0.32em;
-  width: 1px;
-  left: 0;
-  background: var(--ink);
+  /* The script's exits and descenders run past the em box. Nothing clips
+     them any more, but the padding keeps a swash clear of its neighbours. */
+  padding: 0 0.14em 0.1em;
   opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.7s var(--ease), transform 0.7s var(--ease);
 }
-@keyframes pen {
-  from { left: 0; opacity: 0.5; }
-  92%  { opacity: 0.5; }
-  to   { left: 100%; opacity: 0; }
-}
-.letter.is-writing .letter-title .ln::after {
-  animation: pen 900ms linear both;
-  animation-delay: calc(var(--i, 0) * 620ms);
+/* Same --i stagger idiom the body paragraphs and the green page's lists
+   use, so one mechanism drives every entrance on the site. */
+.letter.is-writing .letter-title .ln {
+  opacity: 1;
+  transform: none;
+  transition-delay: calc(var(--i, 0) * 0.18s);
 }
 
 .letter-body {
   font-family: var(--serif-body);
-  font-weight: 300;
-  font-size: clamp(1.05rem, 0.95rem + 0.5vw, 1.35rem);
+  font-weight: 400;
+  font-size: max(0.85rem, min(clamp(1.05rem, 0.95rem + 0.5vw, 1.3rem), 2.6vh));
   line-height: 1.65;
 }
 .letter-body p {
-  margin-bottom: var(--space-2);
+  margin-bottom: clamp(0.5rem, 1.6vh, 1rem);
   opacity: 0;
   transform: translateY(8px);
   transition: opacity 0.7s var(--ease), transform 0.7s var(--ease);
@@ -471,9 +491,9 @@ input, textarea { font: inherit; color: inherit; }
 
 .letter-signoff {
   font-family: var(--serif-body);
-  font-weight: 300;
-  font-size: clamp(1.05rem, 0.95rem + 0.5vw, 1.35rem);
-  margin-top: var(--space-4);
+  font-weight: 400;
+  font-size: max(0.85rem, min(clamp(1.05rem, 0.95rem + 0.5vw, 1.3rem), 2.6vh));
+  margin-top: clamp(1.25rem, 4vh, 3rem);
   opacity: 0;
   transition: opacity 0.5s var(--ease);
 }
@@ -481,36 +501,36 @@ input, textarea { font: inherit; color: inherit; }
 
 .letter-names {
   font-family: var(--script);
-  font-size: clamp(1.9rem, 1.2rem + 3vw, 3rem);
-  line-height: 1.1;
+  font-size: max(1.3rem, min(clamp(1.8rem, 1.15rem + 2.8vw, 2.8rem), 4.5vh));
+  line-height: 1.25;
   margin-top: var(--space-1);
 }
-/* Delayed past the sign-off's fade, so the names are written under a line
-   that is already there rather than alongside it. */
-.letter.is-signing .letter-names .ink {
-  animation: write 1000ms linear both 400ms;
-}
-.letter.is-signing .letter-names .ln::after {
-  animation: pen 1000ms linear both 400ms;
+/* Held past the sign-off's fade, so the names arrive under a line that is
+   already there rather than alongside it. */
+.letter.is-signing .letter-names .ln {
+  opacity: 1;
+  transform: none;
+  transition-delay: calc(0.4s + var(--i, 0) * 0.18s);
 }
 
-/* fixed, not sticky. On a small phone the German copy pushes the letter
-   past one screen, and the hint has to stay at the foot of the *viewport*
-   or the guest never sees the thing telling them to scroll. sticky cannot
-   do it here: .letter clips its florals with overflow: hidden, and a
-   sticky child inside a non-scrolling overflow container never engages.
-   Nothing on the way up establishes a containing block for fixed, so it
-   escapes that clip cleanly. */
+/* In the flow, below the paper, on the beige. It was fixed to the foot of
+   the viewport back when the letter was full-bleed and had nowhere else to
+   put it. Now the paper is a flex item that gives up exactly the height
+   this needs, so there is no reserved strip to keep in step with it, and
+   the hint cannot end up sitting on the paper's bottom edge.
+
+   On a screen too short for the whole letter it goes below the fold, which
+   is honest: the guest reaches it by doing the thing it is asking for, and
+   js/paging.js leaves that page scrolling normally rather than locking it. */
 .letter-hint {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: var(--space-3);
+  flex: 0 0 auto;
+  margin-top: clamp(0.9rem, 2.5vh, 1.75rem);
   text-align: center;
   font-size: var(--step--1);
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--ink-soft);
+  cursor: pointer;
   opacity: 0;
   transition: opacity 0.8s var(--ease);
 }
@@ -519,7 +539,7 @@ input, textarea { font: inherit; color: inherit; }
 .letter-hint::after {
   content: "\2193";
   display: block;
-  margin-top: 0.5rem;
+  margin-top: 0.35rem;
   letter-spacing: 0;
   animation: hint-nudge 2.4s var(--ease) infinite;
 }
@@ -528,28 +548,30 @@ input, textarea { font: inherit; color: inherit; }
   80% { transform: translateY(4px); opacity: 1; }
 }
 
+.letter.is-done .ln,
 .letter.is-done .letter-body p,
 .letter.is-done .letter-signoff { opacity: 1; transform: none; transition: none; }
-.letter.is-done .ln::after { animation: none; opacity: 0; }
 
 @media (max-height: 700px), (max-width: 24rem) {
-  .letter { padding: 4.75rem var(--space-3) 5rem; }
-  .letter-title { font-size: clamp(2.1rem, 1.4rem + 4vw, 3.2rem); margin-bottom: var(--space-2); }
-  .letter-body { font-size: 1rem; line-height: 1.55; }
-  .letter-body p { margin-bottom: var(--space-1); }
-  .letter-signoff { margin-top: var(--space-3); }
-  .letter-names { font-size: clamp(1.6rem, 1.1rem + 2.4vw, 2.4rem); }
+  /* Vertical room is what is short here, not horizontal: the side margin is
+     the whole reason the paper reads as a letter, so it stays. */
+  .letter { --letter-pad-y: 0.6rem; }
+  .letter-paper { padding: clamp(0.8rem, 2.5vh, 1.75rem) var(--space-2); }
+  .letter-title { font-size: max(1.65rem, min(clamp(2rem, 1.3rem + 3.6vw, 3rem), 6vh)); margin-bottom: var(--space-2); }
+  .letter-body { font-size: max(0.85rem, min(1rem, 2.4vh)); line-height: 1.5; }
+  .letter-body p { margin-bottom: clamp(0.35rem, 1.2vh, 0.5rem); }
+  .letter-signoff { font-size: max(0.85rem, min(1rem, 2.4vh)); margin-top: clamp(0.9rem, 3vh, 1.75rem); }
+  .letter-names { font-size: max(1.3rem, min(clamp(1.5rem, 1.05rem + 2.2vw, 2.2rem), 4.2vh)); }
+  .letter-hint { margin-top: var(--space-1); }
+
+  /* The paper shrinks faster than the type does, so at this size the corner
+     pieces start crowding the title and the names. Frame, don't crowd. */
+  .fl-tl { width: min(20%, 6rem); }
+  .fl-tr { width: min(16%, 5rem); }
+  .fl-bl { width: min(26%, 8rem); }
+  .fl-br { width: min(18%, 6rem); }
   .lang-switch { top: var(--space-2); right: var(--space-2); }
   .lang-switch button { padding: 0.25rem 0.5rem; font-size: 0.65rem; }
-
-  /* Back into the flow at the foot of the letter. On a screen this short
-     the letter cannot fit anyway, so a hint pinned to the viewport would
-     just sit on top of the names. Below the fold is the honest place for
-     it: the guest reaches it by doing the thing it is asking for. */
-  .letter-hint {
-    position: static;
-    margin-top: var(--space-4);
-  }
 }
 
 /* ============================================================
@@ -617,9 +639,9 @@ main { overflow-x: hidden; }
   transform: none;
   border-top: 0;
 }
-/* Fixed rather than sitting in #card: the letter owns the first screen
-   now, and a guest reading it in the wrong language should not have to
-   scroll past the whole thing to find the switch. */
+/* Fixed rather than sitting in #card, so it is reachable from anywhere on
+   the green page. It is hidden while the guest is on the letter: a control
+   floating over the paper breaks the one illusion the first screen has. */
 .lang-switch {
   position: fixed;
   z-index: 20;
@@ -632,7 +654,7 @@ main { overflow-x: hidden; }
   padding: 2px;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.8s var(--ease), border-color 0.4s var(--ease);
+  transition: opacity 0.8s var(--ease);
 }
 .app-ready .lang-switch { opacity: 1; pointer-events: auto; }
 .lang-switch button {
@@ -645,17 +667,13 @@ main { overflow-x: hidden; }
 }
 .lang-switch button[aria-current="true"] { background: var(--gold); color: var(--green-deep); }
 
-/* Over the letter it sits on cream, where ivory on gold is close to
-   invisible. main.js toggles this off an observer on #letter. */
-.over-letter .lang-switch {
-  border-color: rgba(61, 61, 59, 0.22);
-  /* It overlaps the corner flower here, and gold-on-watercolour is not
-     legible. On the green page there is nothing behind it to hide. */
-  background: rgba(246, 237, 222, 0.82);
-  backdrop-filter: blur(3px);
-}
-.over-letter .lang-switch button { color: var(--ink-soft); }
-.over-letter .lang-switch button[aria-current="true"] { background: var(--ink); color: var(--cream); }
+/* Gone while the letter is the surface, faded back in by the existing
+   opacity transition as the snap carries the guest onto the green page.
+   body.over-letter is toggled off an observer on #letter in main.js.
+   The cost: a guest whose link opened in the wrong language cannot fix it
+   until they have paged down. They can switch there and scroll back, and
+   render.js rebuilds the letter in the new language when they do. */
+.over-letter .lang-switch { opacity: 0; pointer-events: none; }
 
 .card-inner {
   display: flex;

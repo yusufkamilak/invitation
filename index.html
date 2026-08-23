@@ -67,9 +67,9 @@
        just hiding it: nothing about the other part ships to their page. -->
   <div id="app" hidden>
 
-    <!-- Page level rather than inside #card: the letter now covers the first
-         screen, so a guest reading it in the wrong language would otherwise
-         have to scroll past the whole thing to find the switch. -->
+    <!-- Page level rather than inside #card, so it is reachable from any
+         section. It is hidden while the guest is on the letter; see the
+         .over-letter rule in css/style.css. -->
     <div class="lang-switch" id="lang-switch" role="group" aria-label="Language">
       <button type="button" data-lang="en">EN</button>
       <button type="button" data-lang="tr">TR</button>
@@ -87,19 +87,28 @@
            sitting above #card would make the card's own scroll cue point
            back up at the letter. -->
       <section id="letter" class="letter" tabindex="-1" aria-labelledby="letter-title">
-        <div class="letter-flora" aria-hidden="true">
-          <span class="fl fl-tl"></span>
-          <span class="fl fl-tr"></span>
-          <span class="fl fl-bl"></span>
-          <span class="fl fl-br"></span>
+        <!-- The paper, and the box js/envelope.js measures and grows the
+             envelope into. The beige around it belongs to #letter and is the
+             same gradient the envelope overlay is painted with, so the card
+             lands on the ground it took off from. -->
+        <div class="letter-paper" id="letter-paper">
+          <div class="letter-flora" aria-hidden="true">
+            <span class="fl fl-tl"></span>
+            <span class="fl fl-tr"></span>
+            <span class="fl fl-bl"></span>
+            <span class="fl fl-br"></span>
+          </div>
+          <div class="letter-inner">
+            <h1 class="letter-title" id="letter-title"><!-- populated by render.js --></h1>
+            <div class="letter-body" id="letter-body"><!-- populated by render.js --></div>
+            <p class="letter-signoff" id="letter-signoff"></p>
+            <p class="letter-names" id="letter-names"></p>
+          </div>
         </div>
-        <div class="letter-inner">
-          <h1 class="letter-title" id="letter-title"><!-- populated by render.js --></h1>
-          <div class="letter-body" id="letter-body"><!-- populated by render.js --></div>
-          <p class="letter-signoff" id="letter-signoff"></p>
-          <p class="letter-names" id="letter-names"></p>
-        </div>
-        <p class="letter-hint" id="letter-hint"></p>
+        <!-- A real control, not just a label: it is the arrow the guest is
+             being pointed at, and js/paging.js takes a click on it as the
+             gesture that pages down to the card. -->
+        <p class="letter-hint" id="letter-hint" role="button" tabindex="0"></p>
       </section>
 
       <section id="card" class="section card">
@@ -241,6 +250,7 @@
   <script src="js/i18n.js" defer></script>
   <script src="js/envelope.js" defer></script>
   <script src="js/letter.js" defer></script>
+  <script src="js/paging.js" defer></script>
   <script src="js/main.js" defer></script>
   <script src="js/unlock.js" defer></script>
 </body>

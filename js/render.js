@@ -102,27 +102,23 @@ window.WeddingRender = (function () {
   // The letter the envelope opens into. Its markup is built here rather
   // than bound with data-bind, and that is not a style choice: bindPass()
   // walks the whole document and sets textContent, which would flatten the
-  // per-line spans below and kill any animation running through them. So
+  // per-line spans below and kill the stagger running through them. So
   // the letter carries no data-bind attributes at all, and this runs from
   // setLanguage() alongside the other renderers.
   //
   // Lines are authored as arrays in content/*.json rather than measured and
-  // split at runtime. Sacramento is a joined script, so per-character
-  // measurement gives overlapping rects, and a runtime splitter would have
-  // to re-run on font load, on resize and on every language switch. Authored
-  // lines also put the ragging under the writer's control, which for a
-  // hand-lettered heading is the whole point.
+  // split at runtime. A runtime splitter would have to re-run on font load,
+  // on resize and on every language switch, and it would rag the lines by
+  // measurement; for a script heading the ragging is an authorial choice.
+  //
+  // One span per line. It used to be two, an inner one for the wipe that
+  // drew the line on to clip and an outer one for the pen tip to ride
+  // outside that clip. Both are gone, and a line only has to fade now.
   function writtenLine(text, index) {
-    // .ln is the line box, .ink is what gets clipped open. They have to be
-    // separate: the pen dot rides on .ln::after, and .ink's own clip-path
-    // would clip it away.
     var line = document.createElement("span");
     line.className = "ln";
     line.style.setProperty("--i", index);
-    var ink = document.createElement("span");
-    ink.className = "ink";
-    ink.textContent = text;
-    line.appendChild(ink);
+    line.textContent = text;
     return line;
   }
 
@@ -419,10 +415,14 @@ window.WeddingRender = (function () {
     // would play inside a subtree screen readers cannot see.
     window.WeddingEnvelope.show(bundle, function () {
       app.removeAttribute("aria-hidden");
-      // Started here, not after the writing: the guest can scroll away from
-      // the letter whenever they like, and everything below it has to be
-      // bound and observing by the time they do.
+      // Started here, not after the letter finishes: one gesture takes the
+      // guest off the letter whenever they like, and everything below it has
+      // to be bound and observing by the time they land.
       if (window.WeddingMain) window.WeddingMain.start(bundle);
+      // Before the letter plays: paging.js takes the scroll lock in the same
+      // frame the envelope releases its own, so there is never a frame in
+      // between where the page can be scrolled.
+      if (window.WeddingPaging) window.WeddingPaging.start();
       if (window.WeddingLetter) window.WeddingLetter.play();
     });
   }

@@ -2,8 +2,9 @@
 
 A private, personalized invitation site covering two occasions: a dinner
 and a friends' getaway. The link opens onto a sealed envelope addressed to
-the guest; one tap turns it over and grows it into a letter, which writes
-itself on and then scrolls away onto the rest of the page. Hosted free on
+the guest; one tap turns it over and grows it into a letter, which fades in
+line by line. One gesture then snaps past it onto the rest of the page,
+which scrolls normally from there. Hosted free on
 GitHub Pages, live through at least October 2027. This file is the
 day-to-day operator's manual.
 
@@ -176,8 +177,16 @@ node tools/make-fonts.mjs
 Three families, `latin` and `latin-ext` subsets only. latin carries the
 German umlauts, latin-ext the Turkish g-breve, s-cedilla and dotted
 capital I; everything else Google offers is dead weight for three
-languages. Playfair Display does the green page, Sacramento is the
-handwriting on the letter, Cormorant Garamond is the letter's body.
+languages. Playfair Display does the green page, Ms Madi is the script on
+the letter (title and names), Alegreya is the letter's body.
+
+The two letter faces are stand-ins. The printed stationery uses Brittany
+Signature and 29LT Riwaya Informal; both are commercial, and since this
+repo is public the embedded base64 would redistribute them. Buying a
+webfont licence for either means adding the file locally and teaching
+`make-fonts.mjs` to read from disk as well as from Google, then changing
+`--script` / `--serif-body` in `css/style.css` and the two family names
+`whenFontsReady()` waits on in `js/letter.js`.
 
 Google now serves these as variable fonts, so asking for two weights
 returns two `@font-face` blocks pointing at the *same* file. The script

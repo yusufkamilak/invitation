@@ -26,11 +26,16 @@ const KEEP = new Set(["latin", "latin-ext"]);
 const FAMILIES = [
   // Headings and the names on the green card.
   { family: "Playfair Display", axis: "wght@400;700" },
-  // The letter's handwriting: title and sign-off. Monoline and connected,
-  // which is what makes the left-to-right reveal read as a pen.
-  { family: "Sacramento", axis: "wght@400" },
-  // The letter's body.
-  { family: "Cormorant Garamond", axis: "wght@300;400" },
+  // The letter's script: title and names. Stands in for Brittany Signature,
+  // which is what the printed stationery uses. Brittany is commercial and
+  // this repo is public, so its bytes can't be committed here; Ms Madi is
+  // the nearest free signature script. Swapping to the real face later means
+  // changing this line, --script in style.css, and the name letter.js waits on.
+  { family: "Ms Madi", axis: "wght@400" },
+  // The letter's body. Stands in for 29LT Riwaya Informal on the same terms:
+  // a warm literary serif rather than a delicate display one, because the
+  // letter is meant to be read.
+  { family: "Alegreya", axis: "wght@400" },
 ];
 
 // Google now serves these as variable fonts: asking for two weights returns

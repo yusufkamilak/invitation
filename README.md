@@ -2,9 +2,10 @@
 
 A private, personalized invitation site covering two occasions: a dinner
 and a friends' getaway. The link opens onto a sealed envelope addressed to
-the guest; one tap opens it and reveals their card. Hosted free on GitHub
-Pages, live through at least October 2027. This file is the day-to-day
-operator's manual.
+the guest; one tap turns it over and grows it into a letter, which writes
+itself on and then scrolls away onto the rest of the page. Hosted free on
+GitHub Pages, live through at least October 2027. This file is the
+day-to-day operator's manual.
 
 Deliberately generic: this file is committed to the public repo, so it
 avoids naming cities, dates, or guests — all of that lives only in the
@@ -39,7 +40,16 @@ Every guest sees the card, the RSVP section and the FAQ. What differs:
 |---|---|---|
 | `s` Spain only | `place`, `plan`, `practical` | `denmark`; `details.denmark` |
 | `d` Denmark only | `denmark` | `place`, `plan`, `practical`; `details.spain`, `details.airbnb`, `details.paypal` |
-| `b` both | all four | only the unused single-event `card.lead*` variants |
+| `b` both | all four | nothing, a both-guest's bundle is unpruned |
+
+The letter on the first screen is the one thing every guest gets
+identically, whatever they were invited to. That is only safe because it
+names no place and no date, and the build enforces it: the letter may only
+use the `{{name}}`, `{{partnerA}}` and `{{partnerB}}` tokens, and
+`build-invites.mjs` fails if it finds any other. Don't relax that. A
+`{{spainCity}}` in the letter would render as an empty string for a
+Denmark-only guest, so it would leak nothing the leak assertion could
+catch and still ship visibly broken copy.
 
 Adding a section means touching three places, or the gating silently
 breaks: the `sectionForKey` map in `js/render.js`, the matching entry in
@@ -47,8 +57,10 @@ breaks: the `sectionForKey` map in `js/render.js`, the matching entry in
 in `index.html`. Forget the prune entry and content leaks; forget
 `sectionForKey` and the wrong guest sees an empty section.
 
-Caveat: the repo itself is public, so both `assets/ph-*.jpg` files are
-browsable on GitHub regardless of event. Pruning hides which guest's page
+Caveat: the repo itself is public, so everything under `assets/` is
+browsable on GitHub regardless of event. The `fl-*.webp` florals on the
+letter are generic watercolours and say nothing about anyone, but the two
+`ph-*.jpg` photos are real. Pruning hides which guest's page
 *references* which photo — it can't hide that the files exist. Don't put
 anything identifying (e.g. a recognisable venue) in a gated photo slot.
 
@@ -136,10 +148,41 @@ thing that only shows up once links are already out:
 - **No wedding vocabulary.** This is a dinner and a getaway, not a wedding.
   That covers `Hochzeit`/`Trauung` and `düğün`/`nikah` too.
 - **One or two short sentences per body.** Nothing over about 25 words.
+- **The letter names no place and no date.** It is the one block that goes
+  to every guest unpruned. The build enforces the token rule; the wording
+  is on you. "the coast" or "five days in the sun" would pass every
+  automated check and still tell a Denmark-only guest what they weren't
+  invited to.
+- **The letter's lines are authored, not wrapped.** `letter.title` and
+  `letter.body` are arrays, and each entry in `title` is written as its own
+  line. That is what keeps the German title, which is much longer than the
+  English one, breaking where it should.
 
 Also keep `en.json`, `tr.json` and `de.json` key-identical. A key present in
 one file and missing in another renders as an empty string with no error, so
 a missing translation is invisible until a guest switches language.
+
+## Fonts
+
+`css/fonts-embedded.css` is generated, not hand-written. Every face is
+inlined as a base64 woff2 so the site makes no third-party requests: a
+guest's visit is never visible to anyone but GitHub Pages. To change or
+re-fetch them:
+
+```
+node tools/make-fonts.mjs
+```
+
+Three families, `latin` and `latin-ext` subsets only. latin carries the
+German umlauts, latin-ext the Turkish g-breve, s-cedilla and dotted
+capital I; everything else Google offers is dead weight for three
+languages. Playfair Display does the green page, Sacramento is the
+handwriting on the letter, Cormorant Garamond is the letter's body.
+
+Google now serves these as variable fonts, so asking for two weights
+returns two `@font-face` blocks pointing at the *same* file. The script
+groups faces by URL and emits each one once with a weight range; without
+that it inlines every byte twice and the file doubles.
 
 ## Revoking a guest
 

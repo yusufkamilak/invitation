@@ -13,6 +13,9 @@
   --beige:      #efe6d6;  /* envelope front paper           */
   --beige-deep: #ddcfb6;  /* envelope inside / folds        */
   --beige-dim:  #c9b795;  /* envelope hairlines             */
+  --cream:      #f6edde;  /* the letter's paper             */
+  --ink:        #3d3d3b;  /* the letter's writing           */
+  --ink-soft:   #8c877c;  /* the letter's scroll hint       */
   --white:      #ffffff;  /* headings                       */
   --ivory:      #ece5d9;  /* body text                      */
   --ivory-soft: #a8a396;  /* muted body, labels             */
@@ -24,7 +27,14 @@
   --error:      #e0a5a5;
 
   --serif: "Playfair Display", Georgia, "Iowan Old Style", "Times New Roman", serif;
-  --script: "Give You Glory", "Segoe Script", cursive;
+  /* The letter only. Cormorant is a light old-style face that reads as
+     printed stationery next to the handwriting, which Playfair, doing the
+     headline work on the green page, does not. */
+  --serif-body: "Cormorant Garamond", Georgia, "Iowan Old Style", serif;
+  /* The handwriting on the letter: title and names. Monoline and joined,
+     which is what lets a left-to-right reveal read as a pen laying ink
+     rather than text appearing. */
+  --script: "Sacramento", "Snell Roundhand", cursive;
   --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 
   --step--1: clamp(0.83rem, 0.8rem + 0.15vw, 0.92rem);
@@ -48,7 +58,14 @@
    Reset
    ============================================================ */
 *, *::before, *::after { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
+html {
+  scroll-behavior: smooth;
+  /* Held open permanently. Without it the sealed state's overflow:hidden
+     removes the desktop scrollbar and releasing it reflows the page by a
+     scrollbar's width, which on this page happens at the exact moment the
+     grown envelope hands over to the letter. */
+  scrollbar-gutter: stable;
+}
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
@@ -63,7 +80,9 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 /* While the envelope is still sealed the page behind it must not scroll. */
-body.is-sealed { overflow: hidden; }
+/* Set on <html> as well as <body>: body alone does not reliably stop the
+   scroll when <html> is the scrolling element. */
+.is-sealed { overflow: hidden; }
 h1, h2, h3 { font-family: var(--serif); font-weight: 400; margin: 0; }
 p { margin: 0; }
 ul, ol { margin: 0; padding: 0; list-style: none; }
@@ -106,10 +125,18 @@ input, textarea { font: inherit; color: inherit; }
 /* ============================================================
    The envelope
 
-   Sits above everything until the guest taps it. The flap is a
-   clip-path triangle hinged on its top edge, so opening it is a
-   single rotateX on a perspective parent. The green card behind
-   it rises out of the pocket, then the whole thing fades.
+   Sits above everything until the guest taps it. Tapping turns the
+   paper over and grows it until it covers the viewport, at which
+   point it is a blank cream rectangle exactly the size and position
+   of #letter underneath, and js/envelope.js swaps one for the other.
+
+   Three nested transforms, and the order carries weight:
+
+     .env-grow    the JS-measured scale, OUTSIDE the perspective, so
+                  the perspective distance grows with the card. Inside
+                  it, a card whose half-width passes 1400px fisheyes.
+     .env-stage   the perspective.
+     .env-paper   the rotateY, with a front and a back face.
    ============================================================ */
 .envelope[hidden] { display: none; }
 .envelope {
@@ -123,10 +150,14 @@ input, textarea { font: inherit; color: inherit; }
   gap: var(--space-4);
   padding: var(--space-3);
   background: radial-gradient(120% 90% at 50% 30%, #f6efe3 0%, var(--beige) 45%, #e2d5bd 100%);
-  opacity: 1;
-  transition: opacity 0.5s var(--ease);
 }
-.envelope.is-gone { opacity: 0; pointer-events: none; }
+
+/* The measured growth. transform only, so it stays on the compositor:
+   animating width/height here would relayout every frame. */
+.env-grow {
+  transition: transform 0.7s var(--ease);
+  will-change: transform;
+}
 
 .env-stage { perspective: 1400px; }
 
@@ -141,34 +172,39 @@ input, textarea { font: inherit; color: inherit; }
   box-shadow: 0 18px 45px -18px rgba(70, 52, 26, 0.45), 0 2px 6px rgba(70, 52, 26, 0.12);
   cursor: pointer;
   transform-style: preserve-3d;
-  transition: transform 0.5s var(--ease), opacity 0.5s var(--ease);
+  transition: transform 0.8s var(--ease);
 }
 .env-paper:active { transform: scale(0.985); }
-.envelope.is-opening .env-paper:active { transform: none; }
+.envelope.is-flipping .env-paper { transform: rotateY(180deg); }
+.envelope.is-flipping .env-paper:active { transform: rotateY(180deg); }
 
-/* The green card, sitting inside the envelope until it rises out. */
-.env-card {
+.env-front,
+.env-back {
   position: absolute;
-  inset: 6%;
-  z-index: 2;
-  background: var(--green);
-  border: 1px solid var(--gold-soft);
-  border-radius: 2px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transform: translateY(0);
-  transition: transform 0.55s var(--ease) 0.3s;
+  inset: 0;
+  border-radius: 3px;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
-.env-card::before {
-  content: "\2726";
-  color: var(--gold);
-  font-size: 1.1rem;
-  opacity: 0;
-  transition: opacity 0.4s var(--ease) 0.55s;
+
+/* Belt and braces on top of backface-visibility. .env-flap carries a
+   drop-shadow filter, which flattens its own subtree and is a known source
+   of one-frame flicker inside a preserve-3d context in Safari. Fading the
+   whole face out as the card passes edge-on makes the flip correct
+   regardless of how well backface culling behaves. */
+.env-front { transition: opacity 0.16s linear 0.32s; }
+.envelope.is-flipping .env-front { opacity: 0; }
+
+/* The face the card lands on, and the only thing on screen by the time it
+   finishes growing. Flat colour on purpose: a composited layer is
+   rasterised once at its starting size, so a texture here would go soft on
+   the way up, a 1px border would come out 3px on one axis and 6px on the
+   other, and a border-radius would stretch into an ellipse. It only has to
+   match #letter's paper, which it then hands over to. */
+.env-back {
+  background: var(--cream);
+  transform: rotateY(180deg);
 }
-.envelope.is-opening .env-card { transform: translateY(-46%); }
-.envelope.is-opening .env-card::before { opacity: 1; }
 
 /* The front face the guest reads. A full rectangle, so the card tucked
    behind it stays hidden until it rises out. The two faint diagonals are
@@ -206,7 +242,8 @@ input, textarea { font: inherit; color: inherit; }
 }
 .env-rule { width: 3.5rem; height: 1px; background: var(--beige-dim); }
 
-/* Flap: hinged on its top edge, flips fully open. */
+/* Flap: closed throughout. It never opens now, the whole card turns over
+   instead, but it is still what makes the front read as an envelope. */
 .env-flap {
   position: absolute;
   left: 0; right: 0; top: 0;
@@ -215,12 +252,8 @@ input, textarea { font: inherit; color: inherit; }
   background: linear-gradient(180deg, #f5efe4 0%, #e6dac4 100%);
   clip-path: polygon(0 0, 100% 0, 50% 100%);
   filter: drop-shadow(0 2px 3px rgba(110, 88, 48, 0.18));
-  transform-origin: top center;
-  transform: rotateX(0deg);
   backface-visibility: hidden;
-  transition: transform 0.55s var(--ease) 0.12s;
 }
-.envelope.is-opening .env-flap { transform: rotateX(-180deg); }
 
 .env-seal {
   position: absolute;
@@ -248,7 +281,7 @@ input, textarea { font: inherit; color: inherit; }
   line-height: 1;
   color: #4b3a1c;
 }
-.envelope.is-opening .env-seal { transform: scale(0.6); opacity: 0; }
+.envelope.is-flipping .env-seal { transform: scale(0.6); opacity: 0; }
 
 .env-hint {
   font-size: var(--step--1);
@@ -257,7 +290,267 @@ input, textarea { font: inherit; color: inherit; }
   color: var(--gold-soft);
   transition: opacity 0.3s var(--ease);
 }
-.envelope.is-opening .env-hint { opacity: 0; }
+.envelope.is-flipping .env-hint { opacity: 0; }
+
+/* ============================================================
+   The letter
+
+   What the envelope turns into, and the first screen of the page.
+   Deliberately not a .section: it has none of the green page's
+   rhythm and must not be picked up by the reveal observer or the
+   scroll-cue lookup, both of which select on .section.
+
+   The writing is a clip-path wipe across live text rather than a
+   traced SVG stroke: the title carries the guest's name, so there
+   are sixteen of them across three languages and no fixed path
+   data would cover it. clip-path over mask-image because inset()
+   is composited in both engines, where mask animations repaint on
+   the main thread.
+   ============================================================ */
+.letter {
+  position: relative;
+  /* svh, never dvh: dvh would resize the letter continuously as the
+     address bar retracts mid-scroll. min-height, never height, so longer
+     German copy can push it taller instead of overflowing. */
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  /* The hint is fixed to the foot of the viewport and the language switch
+     to the head, so both are out of flow. The padding is what keeps the
+     writing from running underneath either of them. */
+  padding: var(--space-5) var(--space-3);
+  background: var(--cream);
+  color: var(--ink);
+  overflow: hidden;
+}
+.letter:focus { outline: none; }
+
+/* Watercolours from the printed card, one per corner. Three paintings,
+   the sprig used twice at different angles. Placed in the corners rather
+   than baked into one landscape backdrop so they still frame the text on
+   a portrait phone. */
+.letter-flora { position: absolute; inset: 0; pointer-events: none; }
+.letter-flora .fl {
+  position: absolute;
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+/* Rotated about the corner they hang from, not their own centre, so
+   changing a size or an angle does not also walk the piece off the edge. */
+.fl-tl {
+  top: -2%;
+  left: -3%;
+  width: min(30vw, 12rem);
+  height: min(46vw, 19rem);
+  background-image: url("../assets/fl-sprig.webp");
+  transform-origin: top left;
+  transform: rotate(188deg) translate(-96%, -92%);
+}
+/* The bloom sits at the top of this painting and the stem trails off the
+   bottom, so it hangs from the top edge rather than the corner: pulled any
+   further up and the flower head itself is what gets cropped. */
+.fl-tr {
+  top: 1%;
+  right: 0;
+  width: min(24vw, 9.5rem);
+  height: min(42vw, 17rem);
+  background-image: url("../assets/fl-stem.webp");
+  transform-origin: top right;
+  transform: rotate(-14deg);
+}
+.fl-bl {
+  bottom: -6%;
+  left: -8%;
+  width: min(40vw, 15rem);
+  height: min(36vw, 14rem);
+  background-image: url("../assets/fl-poppy.webp");
+}
+.fl-br {
+  right: -2%;
+  bottom: -2%;
+  width: min(28vw, 11rem);
+  height: min(44vw, 18rem);
+  background-image: url("../assets/fl-sprig.webp");
+  transform-origin: bottom right;
+  transform: rotate(-40deg);
+}
+
+.letter-inner {
+  position: relative;
+  width: 100%;
+  max-width: 34rem;
+  margin: auto 0;
+  text-align: center;
+}
+
+.letter-title {
+  font-family: var(--script);
+  font-weight: 400;
+  font-size: clamp(2.6rem, 1.5rem + 5vw, 4.6rem);
+  line-height: 1.05;
+  color: var(--ink);
+  margin-bottom: var(--space-3);
+}
+
+/* .ln is the line box, .ink is what gets clipped open.
+   width: fit-content matters more than it looks: inset() percentages
+   resolve against the border box, so a full-width centred line would
+   spend the first fifth of the wipe crossing empty space with nothing
+   appearing. */
+.letter .ln {
+  display: block;
+  width: fit-content;
+  margin-inline: auto;
+  position: relative;
+  /* Sacramento's swashes and descenders run past the em box; without the
+     padding the wipe shaves their tails. */
+  padding: 0 0.12em 0.08em;
+}
+.letter .ink {
+  display: inline-block;
+  clip-path: inset(0 100% 0 0);
+}
+.letter.is-done .ink { clip-path: inset(0); animation: none; }
+
+/* linear, not var(--ease). A pen moves at a constant speed; the site's
+   ease-out would slam the wipe open and then crawl, which is the whole
+   difference between handwriting and a CSS transition.
+   `both` with the start state declared on .ink itself, so there is never a
+   frame of unclipped text: Safari has flashed full text for one frame on
+   clip-path animations under the -webkit-font-smoothing set on body. */
+@keyframes write { to { clip-path: inset(0); } }
+
+.letter.is-writing .letter-title .ink {
+  animation: write 900ms linear both;
+  animation-delay: calc(var(--i, 0) * 620ms);
+}
+
+/* The pen tip. It rides .ln, not .ink, because .ink's own clip-path would
+   clip it away. Identical duration, delay and timing function, so the two
+   stay frame-synced without any JS keeping them in step. */
+.letter .ln::after {
+  content: "";
+  position: absolute;
+  top: 0.12em;
+  bottom: 0.32em;
+  width: 1px;
+  left: 0;
+  background: var(--ink);
+  opacity: 0;
+}
+@keyframes pen {
+  from { left: 0; opacity: 0.5; }
+  92%  { opacity: 0.5; }
+  to   { left: 100%; opacity: 0; }
+}
+.letter.is-writing .letter-title .ln::after {
+  animation: pen 900ms linear both;
+  animation-delay: calc(var(--i, 0) * 620ms);
+}
+
+.letter-body {
+  font-family: var(--serif-body);
+  font-weight: 300;
+  font-size: clamp(1.05rem, 0.95rem + 0.5vw, 1.35rem);
+  line-height: 1.65;
+}
+.letter-body p {
+  margin-bottom: var(--space-2);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.7s var(--ease), transform 0.7s var(--ease);
+}
+.letter-body p:last-child { margin-bottom: 0; }
+.letter.is-body-in .letter-body p {
+  opacity: 1;
+  transform: none;
+  transition-delay: calc(var(--i, 0) * 0.2s);
+}
+
+.letter-signoff {
+  font-family: var(--serif-body);
+  font-weight: 300;
+  font-size: clamp(1.05rem, 0.95rem + 0.5vw, 1.35rem);
+  margin-top: var(--space-4);
+  opacity: 0;
+  transition: opacity 0.5s var(--ease);
+}
+.letter.is-signing .letter-signoff { opacity: 1; }
+
+.letter-names {
+  font-family: var(--script);
+  font-size: clamp(1.9rem, 1.2rem + 3vw, 3rem);
+  line-height: 1.1;
+  margin-top: var(--space-1);
+}
+/* Delayed past the sign-off's fade, so the names are written under a line
+   that is already there rather than alongside it. */
+.letter.is-signing .letter-names .ink {
+  animation: write 1000ms linear both 400ms;
+}
+.letter.is-signing .letter-names .ln::after {
+  animation: pen 1000ms linear both 400ms;
+}
+
+/* fixed, not sticky. On a small phone the German copy pushes the letter
+   past one screen, and the hint has to stay at the foot of the *viewport*
+   or the guest never sees the thing telling them to scroll. sticky cannot
+   do it here: .letter clips its florals with overflow: hidden, and a
+   sticky child inside a non-scrolling overflow container never engages.
+   Nothing on the way up establishes a containing block for fixed, so it
+   escapes that clip cleanly. */
+.letter-hint {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: var(--space-3);
+  text-align: center;
+  font-size: var(--step--1);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  opacity: 0;
+  transition: opacity 0.8s var(--ease);
+}
+.over-letter .letter.is-hinting .letter-hint,
+.over-letter .letter.is-done .letter-hint { opacity: 1; }
+.letter-hint::after {
+  content: "\2193";
+  display: block;
+  margin-top: 0.5rem;
+  letter-spacing: 0;
+  animation: hint-nudge 2.4s var(--ease) infinite;
+}
+@keyframes hint-nudge {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.6; }
+  80% { transform: translateY(4px); opacity: 1; }
+}
+
+.letter.is-done .letter-body p,
+.letter.is-done .letter-signoff { opacity: 1; transform: none; transition: none; }
+.letter.is-done .ln::after { animation: none; opacity: 0; }
+
+@media (max-height: 700px), (max-width: 24rem) {
+  .letter { padding: 4.75rem var(--space-3) 5rem; }
+  .letter-title { font-size: clamp(2.1rem, 1.4rem + 4vw, 3.2rem); margin-bottom: var(--space-2); }
+  .letter-body { font-size: 1rem; line-height: 1.55; }
+  .letter-body p { margin-bottom: var(--space-1); }
+  .letter-signoff { margin-top: var(--space-3); }
+  .letter-names { font-size: clamp(1.6rem, 1.1rem + 2.4vw, 2.4rem); }
+  .lang-switch { top: var(--space-2); right: var(--space-2); }
+  .lang-switch button { padding: 0.25rem 0.5rem; font-size: 0.65rem; }
+
+  /* Back into the flow at the foot of the letter. On a screen this short
+     the letter cannot fit anyway, so a hint pinned to the viewport would
+     just sit on top of the names. Below the fold is the honest place for
+     it: the guest reaches it by doing the thing it is asking for. */
+  .letter-hint {
+    position: static;
+    margin-top: var(--space-4);
+  }
+}
 
 /* ============================================================
    Layout / sections
@@ -324,8 +617,12 @@ main { overflow-x: hidden; }
   transform: none;
   border-top: 0;
 }
+/* Fixed rather than sitting in #card: the letter owns the first screen
+   now, and a guest reading it in the wrong language should not have to
+   scroll past the whole thing to find the switch. */
 .lang-switch {
-  position: absolute;
+  position: fixed;
+  z-index: 20;
   top: var(--space-3);
   right: var(--space-3);
   display: flex;
@@ -334,9 +631,10 @@ main { overflow-x: hidden; }
   border-radius: 999px;
   padding: 2px;
   opacity: 0;
-  transition: opacity 0.8s var(--ease) 0.5s;
+  pointer-events: none;
+  transition: opacity 0.8s var(--ease), border-color 0.4s var(--ease);
 }
-.card.is-ready .lang-switch { opacity: 1; }
+.app-ready .lang-switch { opacity: 1; pointer-events: auto; }
 .lang-switch button {
   padding: 0.3rem 0.65rem;
   font-size: 0.7rem;
@@ -346,6 +644,18 @@ main { overflow-x: hidden; }
   transition: color 0.2s var(--ease), background 0.2s var(--ease);
 }
 .lang-switch button[aria-current="true"] { background: var(--gold); color: var(--green-deep); }
+
+/* Over the letter it sits on cream, where ivory on gold is close to
+   invisible. main.js toggles this off an observer on #letter. */
+.over-letter .lang-switch {
+  border-color: rgba(61, 61, 59, 0.22);
+  /* It overlaps the corner flower here, and gold-on-watercolour is not
+     legible. On the green page there is nothing behind it to hide. */
+  background: rgba(246, 237, 222, 0.82);
+  backdrop-filter: blur(3px);
+}
+.over-letter .lang-switch button { color: var(--ink-soft); }
+.over-letter .lang-switch button[aria-current="true"] { background: var(--ink); color: var(--cream); }
 
 .card-inner {
   display: flex;
@@ -358,13 +668,6 @@ main { overflow-x: hidden; }
 }
 .card.is-ready .card-inner { opacity: 1; transform: none; }
 
-.card-eyebrow {
-  font-size: var(--step--1);
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
-  color: var(--gold);
-  margin-bottom: var(--space-3);
-}
 .card-names {
   font-size: var(--step-3);
   font-style: italic;
@@ -388,7 +691,7 @@ main { overflow-x: hidden; }
   align-items: center;
   gap: 0.9rem;
   color: var(--gold);
-  margin: var(--space-3) 0 var(--space-4);
+  margin: var(--space-3) 0;
   font-size: 0.75rem;
 }
 .card-rule::before, .card-rule::after {
@@ -404,18 +707,6 @@ main { overflow-x: hidden; }
 .card-rule::after { transform-origin: left; }
 .card.is-ready .card-rule::before, .card.is-ready .card-rule::after { transform: scaleX(1); }
 .card-rule span::before { content: "\2726"; }
-
-.card-greeting {
-  font-family: var(--serif);
-  font-size: var(--step-2);
-  color: var(--white);
-  margin-bottom: var(--space-2);
-}
-.card-lead {
-  color: var(--ivory);
-  max-width: 30ch;
-  margin: 0 auto var(--space-4);
-}
 
 /* The structured "at a glance" block: one column per place. */
 .card-meta {

@@ -93,12 +93,15 @@ function deletePath(obj, path) {
 }
 
 // keys removed from content/{lang}.json depending on which event(s) a guest
-// is invited to. "b" (both) only loses the unused single-event lead
-// variants — everything else stays since a both-guest sees both parts.
+// is invited to. "b" (both) loses nothing: a both-guest sees both parts.
+//
+// The `letter` block is deliberately absent here. It is the same letter for
+// everyone, which is only safe because it names no place and no date — see
+// the letter-token assertion below, which is what actually holds that line.
 const CONTENT_PRUNE = {
-  s: ["denmark", "card.leadDenmark", "card.leadBoth", "faq.denmark"],
-  d: ["place", "plan", "practical", "card.leadSpain", "card.leadBoth", "faq.spain"],
-  b: ["card.leadSpain", "card.leadDenmark"],
+  s: ["denmark", "faq.denmark"],
+  d: ["place", "plan", "practical", "faq.spain"],
+  b: [],
 };
 
 // keys removed from content/details.json the same way.
@@ -121,6 +124,30 @@ const LEAK_CHECK = {
   ].filter(Boolean),
   b: () => [],
 };
+
+// The letter is unpruned, so every guest gets the same one whatever they
+// were invited to. LEAK_CHECK alone cannot keep that safe: it matches
+// literal strings, and buildCtx() in js/render.js resolves {{spainCity}} to
+// an empty string for a Denmark-only guest, so a letter written with that
+// token would leak nothing detectable while rendering as broken copy. Only
+// the three tokens that exist for every guest are allowed.
+const LETTER_TOKENS_OK = new Set(["name", "partnerA", "partnerB"]);
+
+function checkLetter(content, name) {
+  for (const lang of Object.keys(content)) {
+    const letter = content[lang]?.letter;
+    if (!letter) continue;
+    for (const [, token] of JSON.stringify(letter).matchAll(/\{\{(\w+)\}\}/g)) {
+      if (!LETTER_TOKENS_OK.has(token)) {
+        fail(
+          `Guest "${name}": content/${lang}.json letter uses {{${token}}}. ` +
+            `The letter goes to every guest unpruned, so it must stay event-neutral: ` +
+            `only ${[...LETTER_TOKENS_OK].join(", ")} are allowed.`
+        );
+      }
+    }
+  }
+}
 
 function pruneForEvent(contentByLang, details, event) {
   const content = JSON.parse(JSON.stringify(contentByLang));
@@ -206,6 +233,8 @@ for (const row of rows) {
   // contain any fact belonging to the part(s) this guest wasn't invited to.
   // Checked against the *original* (unpruned) details — checking the pruned
   // copy would trivially always pass, since pruning already deleted the facts.
+  checkLetter(pruned.content, name);
+
   const plainCheck = JSON.stringify(bundle);
   for (const needle of LEAK_CHECK[event](details)) {
     if (needle && plainCheck.includes(needle)) {

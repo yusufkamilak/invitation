@@ -36,16 +36,25 @@
        dismissed by envelope.js on the first tap, which is also what starts the
        page's own entrance animations (see js/envelope.js). -->
   <div id="envelope" class="envelope" hidden>
-    <div class="env-stage">
-      <div class="env-paper" id="env-paper" role="button" tabindex="0" aria-describedby="env-hint">
-        <div class="env-flap" aria-hidden="true"></div>
-        <div class="env-address">
-          <span class="env-to" id="env-to"></span>
-          <span class="env-rule" aria-hidden="true"></span>
+    <div class="env-grow" id="env-grow">
+      <div class="env-stage">
+        <div class="env-paper" id="env-paper" role="button" tabindex="0" aria-describedby="env-hint">
+          <div class="env-front">
+            <div class="env-flap" aria-hidden="true"></div>
+            <div class="env-address">
+              <span class="env-to" id="env-to"></span>
+              <span class="env-rule" aria-hidden="true"></span>
+            </div>
+            <div class="env-pocket" aria-hidden="true"></div>
+            <div class="env-seal" id="env-seal" aria-hidden="true"><span></span></div>
+          </div>
+          <!-- The face the guest lands on. Deliberately a flat colour and
+               nothing else: a layer being scale-animated is rasterised once
+               at its starting size, so any texture, border or radius here
+               would go soft and distort on the way up. The letter's real
+               paper is #letter, underneath. -->
+          <div class="env-back" aria-hidden="true"></div>
         </div>
-        <div class="env-card" aria-hidden="true"></div>
-        <div class="env-pocket" aria-hidden="true"></div>
-        <div class="env-seal" id="env-seal" aria-hidden="true"><span></span></div>
       </div>
     </div>
     <p class="env-hint" id="env-hint" data-bind="card.openHint"></p>
@@ -57,22 +66,46 @@
        so render.js removes the matching markup below entirely rather than
        just hiding it: nothing about the other part ships to their page. -->
   <div id="app" hidden>
+
+    <!-- Page level rather than inside #card: the letter now covers the first
+         screen, so a guest reading it in the wrong language would otherwise
+         have to scroll past the whole thing to find the switch. -->
+    <div class="lang-switch" id="lang-switch" role="group" aria-label="Language">
+      <button type="button" data-lang="en">EN</button>
+      <button type="button" data-lang="tr">TR</button>
+      <button type="button" data-lang="de">DE</button>
+    </div>
+
     <main>
 
-      <section id="card" class="section card">
-        <div class="lang-switch" id="lang-switch" role="group" aria-label="Language">
-          <button type="button" data-lang="en">EN</button>
-          <button type="button" data-lang="tr">TR</button>
-          <button type="button" data-lang="de">DE</button>
+      <!-- The letter the envelope turns into. Filled by render.js
+           (renderLetter) and animated by js/letter.js.
+
+           Deliberately NOT class="section": .section carries the green
+           page's fade-up entrance and is what render.js's scroll-cue
+           lookup and main.js's reveal observer both select on. A .section
+           sitting above #card would make the card's own scroll cue point
+           back up at the letter. -->
+      <section id="letter" class="letter" tabindex="-1" aria-labelledby="letter-title">
+        <div class="letter-flora" aria-hidden="true">
+          <span class="fl fl-tl"></span>
+          <span class="fl fl-tr"></span>
+          <span class="fl fl-bl"></span>
+          <span class="fl fl-br"></span>
         </div>
+        <div class="letter-inner">
+          <h1 class="letter-title" id="letter-title"><!-- populated by render.js --></h1>
+          <div class="letter-body" id="letter-body"><!-- populated by render.js --></div>
+          <p class="letter-signoff" id="letter-signoff"></p>
+          <p class="letter-names" id="letter-names"></p>
+        </div>
+        <p class="letter-hint" id="letter-hint"></p>
+      </section>
 
+      <section id="card" class="section card">
         <div class="card-inner">
-          <p class="card-eyebrow" data-bind="card.eyebrow"></p>
-          <h1 class="card-names" id="card-names"></h1>
+          <h2 class="card-names" id="card-names"></h2>
           <div class="card-rule" aria-hidden="true"><span></span></div>
-
-          <p class="card-greeting" data-bind="card.greeting"></p>
-          <p class="card-lead" data-bind="card.lead"></p>
 
           <div class="card-meta" id="card-meta"><!-- populated by render.js --></div>
 
@@ -207,6 +240,7 @@
   <script src="js/render.js" defer></script>
   <script src="js/i18n.js" defer></script>
   <script src="js/envelope.js" defer></script>
+  <script src="js/letter.js" defer></script>
   <script src="js/main.js" defer></script>
   <script src="js/unlock.js" defer></script>
 </body>

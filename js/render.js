@@ -97,11 +97,78 @@ window.WeddingRender = (function () {
     });
   }
 
+  // ---- the letter ----
+
+  // The letter the envelope opens into. Its markup is built here rather
+  // than bound with data-bind, and that is not a style choice: bindPass()
+  // walks the whole document and sets textContent, which would flatten the
+  // per-line spans below and kill any animation running through them. So
+  // the letter carries no data-bind attributes at all, and this runs from
+  // setLanguage() alongside the other renderers.
+  //
+  // Lines are authored as arrays in content/*.json rather than measured and
+  // split at runtime. Sacramento is a joined script, so per-character
+  // measurement gives overlapping rects, and a runtime splitter would have
+  // to re-run on font load, on resize and on every language switch. Authored
+  // lines also put the ragging under the writer's control, which for a
+  // hand-lettered heading is the whole point.
+  function writtenLine(text, index) {
+    // .ln is the line box, .ink is what gets clipped open. They have to be
+    // separate: the pen dot rides on .ln::after, and .ink's own clip-path
+    // would clip it away.
+    var line = document.createElement("span");
+    line.className = "ln";
+    line.style.setProperty("--i", index);
+    var ink = document.createElement("span");
+    ink.className = "ink";
+    ink.textContent = text;
+    line.appendChild(ink);
+    return line;
+  }
+
+  function renderLetter(ctx, c) {
+    if (!c.letter) return;
+
+    var title = document.getElementById("letter-title");
+    title.innerHTML = "";
+    (c.letter.title || []).forEach(function (line, i) {
+      title.appendChild(writtenLine(t(line, ctx), i));
+    });
+
+    var body = document.getElementById("letter-body");
+    body.innerHTML = "";
+    (c.letter.body || []).forEach(function (para, i) {
+      var p = document.createElement("p");
+      // Same --i stagger idiom the timeline and FAQ lists already use.
+      p.style.setProperty("--i", i);
+      p.textContent = t(para, ctx);
+      body.appendChild(p);
+    });
+
+    setText(document.getElementById("letter-signoff"), t(c.letter.signoff || "", ctx));
+
+    // Built from details.json like renderNames, not from a content key:
+    // the couple's names are a fact, not copy, and should not need
+    // translating three times.
+    var names = document.getElementById("letter-names");
+    names.innerHTML = "";
+    names.appendChild(writtenLine(ctx.partnerA + " & " + ctx.partnerB, 0));
+
+    setText(document.getElementById("letter-hint"), t(c.letter.scrollHint || "", ctx));
+
+    // A language switch part-way through the sequence rebuilds every line
+    // from scratch, which would otherwise restart the writing from nothing.
+    // If the guest has already watched it, put the new lines straight into
+    // their finished state.
+    if (window.WeddingLetter && window.WeddingLetter.isDone()) {
+      window.WeddingLetter.finish();
+    }
+  }
+
   // ---- the card ----
 
-  // "Yusuf & Toni" — the names in Playfair italic, the ampersand in the
-  // script face. Built here rather than in the HTML so it stays driven by
-  // details.json.
+  // "Yusuf & Toni", set in Playfair italic. Built here rather than in the
+  // HTML so it stays driven by details.json.
   function renderNames(ctx) {
     var el = document.getElementById("card-names");
     el.innerHTML = "";
@@ -317,17 +384,9 @@ window.WeddingRender = (function () {
 
     document.documentElement.lang = lang;
 
-    // bindPass runs first: it resolves data-bind="card.lead" against c.card
-    // directly, which has no plain "lead" key (only the leadSpain /
-    // leadDenmark / leadBoth variants) — so it clears it to "". The
-    // event-specific override below MUST run after bindPass, the same order
-    // every other event-scoped renderer already follows, or it would be
-    // immediately blanked out again.
     bindPass(document.body, ctx, c);
 
-    var leadKey = { s: "leadSpain", d: "leadDenmark", b: "leadBoth" }[bundle.guest.event] || "leadBoth";
-    setText(document.querySelector('[data-bind="card.lead"]'), t(c.card[leadKey], ctx));
-
+    renderLetter(ctx, c);
     renderNames(ctx);
     renderCardMeta(ctx, c);
     renderDenmark(ctx, c);
@@ -347,14 +406,24 @@ window.WeddingRender = (function () {
     setLanguage(startLang);
 
     // The page is painted but sealed behind the envelope. Nothing animates
-    // and nothing scrolls until the guest opens it.
+    // and nothing scrolls until the guest opens it. The letter needs to be
+    // laid out from the start even so: envelope.js measures it to work out
+    // how far the envelope has to grow.
     var app = document.getElementById("app");
     app.hidden = false;
     app.setAttribute("aria-hidden", "true");
 
+    // Called by envelope.js at the hand-off, once the grown envelope has
+    // been swapped for the real letter underneath it. aria-hidden comes off
+    // here rather than when the writing finishes, or the whole sequence
+    // would play inside a subtree screen readers cannot see.
     window.WeddingEnvelope.show(bundle, function () {
       app.removeAttribute("aria-hidden");
+      // Started here, not after the writing: the guest can scroll away from
+      // the letter whenever they like, and everything below it has to be
+      // bound and observing by the time they do.
       if (window.WeddingMain) window.WeddingMain.start(bundle);
+      if (window.WeddingLetter) window.WeddingLetter.play();
     });
   }
 

@@ -38,12 +38,61 @@ window.WeddingMain = (function () {
   }
 
   // ---------------------------------------------------------------
-  // Card entrance — plays once, as the envelope clears
+  // Card entrance — plays once, when the card is actually on screen.
+  //
+  // It used to fire on a bare rAF, because the card was the first thing
+  // the envelope opened onto. The letter holds that position now and the
+  // card sits a full screen below it, so an immediate rAF would spend the
+  // whole entrance (the inner fade, the rule drawing itself out, the meta
+  // stagger) before anyone had scrolled far enough to see it.
   // ---------------------------------------------------------------
   function initCardEntrance() {
-    requestAnimationFrame(function () {
-      document.getElementById("card").classList.add("is-ready");
-    });
+    var card = document.getElementById("card");
+    if (!card) return;
+    if (!("IntersectionObserver" in window)) {
+      card.classList.add("is-ready");
+      return;
+    }
+    var io = new IntersectionObserver(
+      function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-ready");
+            io.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.15 }
+    );
+    io.observe(card);
+  }
+
+  // ---------------------------------------------------------------
+  // The language switch is fixed over whatever is behind it, and the
+  // letter is cream while everything below it is green. Ivory on gold is
+  // close to invisible on cream, so track which surface it is over.
+  // ---------------------------------------------------------------
+  function initSurfaceWatch() {
+    var letter = document.getElementById("letter");
+    if (!letter) return;
+    if (!("IntersectionObserver" in window)) return;
+    var io = new IntersectionObserver(
+      function (entries) {
+        entries.forEach(function (entry) {
+          // isIntersecting alone is not enough: it goes true on a zero-height
+          // touch, so scrolling exactly one viewport leaves the letter's
+          // bottom edge grazing the band and the switch stuck in its cream
+          // colours over the green page.
+          var over = entry.isIntersecting && entry.intersectionRect.height > 8;
+          document.body.classList.toggle("over-letter", over);
+        });
+      },
+      // The switch sits in the top corner, so what matters is whether the
+      // letter still reaches the top of the screen, not whether any part of
+      // it is visible at all.
+      { rootMargin: "0px 0px -70% 0px", threshold: [0, 0.05, 0.25, 0.5, 0.9] }
+    );
+    io.observe(letter);
   }
 
   // ---------------------------------------------------------------
@@ -233,6 +282,7 @@ window.WeddingMain = (function () {
   function start(b) {
     bundle = b;
     initCardEntrance();
+    initSurfaceWatch();
     initReveal();
     initCountdown();
     bindFaq();

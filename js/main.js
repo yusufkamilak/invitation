@@ -32,7 +32,13 @@ window.WeddingMain = (function () {
           }
         });
       },
-      { threshold: 0.12 }
+      // threshold is a fraction of the *target*, not of the viewport, so a
+      // section taller than about eight screens can never reach 0.12 and
+      // would sit at opacity 0 for ever. The Copenhagen section is now
+      // easily that tall on a phone. Trip on the top edge crossing into
+      // the lower 88% of the viewport instead, which does not care how
+      // tall the section is.
+      { threshold: 0, rootMargin: "0px 0px -12% 0px" }
     );
     sections.forEach(function (s) { io.observe(s); });
   }

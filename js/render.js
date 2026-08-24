@@ -239,9 +239,11 @@ window.WeddingRender = (function () {
       var li = document.createElement("li");
       li.className = "timeline-item";
       li.style.setProperty("--i", i);
+      // t() hands back a non-string unchanged, so a step with no label
+      // would render the literal text "undefined" rather than nothing.
       var label = document.createElement("p");
       label.className = "timeline-label";
-      label.textContent = t(step.label, ctx);
+      label.textContent = step.label ? t(step.label, ctx) : "";
       var title = document.createElement("p");
       title.className = "timeline-title";
       title.textContent = t(step.title, ctx);
@@ -255,9 +257,140 @@ window.WeddingRender = (function () {
     });
   }
 
+  // ---- Copenhagen: a composed section rather than a list ----
+
+  // The design interleaves two photographs and three drawn connectors
+  // between five named steps, alternating left and right down the page.
+  // That arrangement lives here rather than in content/*.json, because it
+  // is layout and would otherwise have to be kept identical in three
+  // languages by hand.
+  //
+  // It degrades on its own. An entry whose step or photo is missing from
+  // this guest's bundle is skipped, and any step the table doesn't place
+  // is appended alternating, so adding a sixth step to the copy makes the
+  // page longer rather than making it wrong.
+  var CPH_FLOW = [
+    { kind: "step",  step: 0, side: "left" },
+    { kind: "link",  shape: "a" },
+    { kind: "photo", photo: "denmarkCar", side: "left", id: "denmark-photo" },
+    { kind: "step",  step: 1, side: "right" },
+    { kind: "link",  shape: "b" },
+    { kind: "step",  step: 2, side: "right" },
+    { kind: "link",  shape: "c" },
+    { kind: "step",  step: 3, side: "left" },
+    { kind: "photo", photo: "denmarkTable", side: "right", id: "denmark-photo-2" },
+    { kind: "step",  step: 4, side: "left" },
+  ];
+
+  // The connectors. Each is one unbroken pen stroke with a loop in it, and
+  // no two repeat, which is what makes them read as drawn rather than
+  // placed. Two variants apiece: a viewBox cannot be changed from a
+  // stylesheet, so the wide loop the zig-zag uses and the tall one the
+  // single column needs have to be separate elements, shown by the
+  // breakpoint.
+  var CPH_PATHS = {
+    // Falls out of the first step, ties a knot, runs away to the right.
+    a: {
+      wide: { box: "0 0 120 64", d: "M6 4C20 16 6 27 14 39c6 9 19 10 21 2 1-6-7-8-8-1-1 9 11 18 25 17 22-2 40-10 62-5" },
+      tall: { box: "0 0 44 96", d: "M20 3c4 14-2 24-9 31-7 7-4 18 5 17 9-1 10-12 2-13-9-1-15 9-11 20 4 12 17 16 15 26-1 6-6 9-10 12" },
+    },
+    // The short one: a loop at the top, then a lazy S down.
+    b: {
+      wide: { box: "0 0 44 96", d: "M22 4c9 2 12 11 5 14-8 3-11-6-4-9 8-3 13 6 10 17-4 14-20 19-18 34 2 15 15 21 11 32" },
+      tall: { box: "0 0 44 96", d: "M22 4c9 2 12 11 5 14-8 3-11-6-4-9 8-3 13 6 10 17-4 14-20 19-18 34 2 15 15 21 11 32" },
+    },
+    // The long ribbon: rises left to right, opens into a wide loop, S back.
+    c: {
+      wide: { box: "0 0 130 60", d: "M4 52c14-8 22-22 40-26 16-4 26 8 40 8 14 0 28-10 32-20 3-8-6-12-12-6-7 7 0 18 12 22 8 3 12 8 10 14" },
+      tall: { box: "0 0 44 96", d: "M20 3c-6 12 4 20 12 18 8-2 9-13 1-14-8-1-12 9-6 17 8 11 4 24-8 32-12 8-12 20-2 27" },
+    },
+  };
+
+  function cphStep(step, side, i, ctx) {
+    var li = document.createElement("li");
+    li.className = "cph-step side-" + side;
+    li.style.setProperty("--i", i);
+    var h = document.createElement("h3");
+    h.className = "cph-title";
+    h.textContent = t(step.title, ctx);
+    var body = document.createElement("p");
+    body.className = "cph-body";
+    body.textContent = t(step.body, ctx);
+    li.appendChild(h);
+    li.appendChild(body);
+    return li;
+  }
+
+  function cphPhoto(url, side, id, i) {
+    var li = document.createElement("li");
+    li.className = "cph-photo side-" + side;
+    li.id = id;
+    li.setAttribute("aria-hidden", "true");
+    li.style.setProperty("--i", i);
+    li.style.backgroundImage = "url('" + url + "')";
+    return li;
+  }
+
+  function svgLink(cls, spec) {
+    return (
+      '<svg class="' + cls + '" viewBox="' + spec.box + '" fill="none" ' +
+      'focusable="false" aria-hidden="true" preserveAspectRatio="xMidYMid meet">' +
+      '<path d="' + spec.d + '"/></svg>'
+    );
+  }
+
+  // The draw-on needs a dash exactly as long as the line it hides. The
+  // tidy way to get that is pathLength="1" on the path and a dasharray of
+  // 1 in the stylesheet, but Chrome does not scale the dash by pathLength,
+  // so that leaves a 1px dash on a 174px path: a dotted line, not a drawn
+  // one. Measure the real geometry instead and hand it to the CSS. Works
+  // on the hidden variant too, since getTotalLength() reads the `d`
+  // attribute rather than the layout.
+  function measureLinks(root) {
+    root.querySelectorAll(".cph-link path").forEach(function (path) {
+      path.style.setProperty("--len", path.getTotalLength());
+    });
+  }
+
+  function cphLink(shape, i) {
+    var li = document.createElement("li");
+    li.className = "cph-link shape-" + shape;
+    li.setAttribute("aria-hidden", "true");
+    li.style.setProperty("--i", i);
+    li.innerHTML = svgLink("link-wide", CPH_PATHS[shape].wide) +
+                   svgLink("link-tall", CPH_PATHS[shape].tall);
+    return li;
+  }
+
   function renderDenmark(ctx, c) {
     if (!c.denmark) return;
-    renderTimeline(document.getElementById("denmark-timeline"), c.denmark.steps, ctx);
+    var ol = document.getElementById("denmark-flow");
+    if (!ol) return;
+    var steps = c.denmark.steps || [];
+    var photos = (bundle.details && bundle.details.photos) || {};
+    var placed = {};
+    var i = 0;
+    ol.innerHTML = "";
+
+    CPH_FLOW.forEach(function (entry) {
+      if (entry.kind === "step") {
+        if (!steps[entry.step]) return;
+        placed[entry.step] = true;
+        ol.appendChild(cphStep(steps[entry.step], entry.side, i++, ctx));
+      } else if (entry.kind === "photo") {
+        if (!photos[entry.photo]) return;
+        ol.appendChild(cphPhoto(photos[entry.photo], entry.side, entry.id, i++));
+      } else {
+        ol.appendChild(cphLink(entry.shape, i++));
+      }
+    });
+
+    steps.forEach(function (step, n) {
+      if (placed[n]) return;
+      ol.appendChild(cphStep(step, n % 2 ? "right" : "left", i++, ctx));
+    });
+
+    measureLinks(ol);
   }
 
   function renderPlace(ctx, c) {
@@ -343,7 +476,10 @@ window.WeddingRender = (function () {
   function applyPhotos() {
     var photos = (bundle.details && bundle.details.photos) || {};
     setPhoto(document.getElementById("place-photo"), photos.place);
-    setPhoto(document.getElementById("denmark-photo"), photos.denmark);
+    // Copenhagen's two insets are part of its composed flow and are set by
+    // renderDenmark. This runs from init(), before the first setLanguage(),
+    // so those elements do not exist yet: looking them up here would find
+    // nothing and silently leave the section without its photographs.
   }
 
   // Removes (not just hides) every section whose content didn't survive the

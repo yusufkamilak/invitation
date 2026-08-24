@@ -5,11 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow, noarchive">
 <meta name="referrer" content="no-referrer">
-<meta name="theme-color" content="#16241C">
+<meta name="theme-color" content="#8C8F7B">
 <title>An Invitation</title>
 <meta name="description" content="A private invitation.">
-<link rel="stylesheet" href="css/fonts-embedded.css?v=808326cc">
-<link rel="stylesheet" href="css/style.css?v=bc80c21e">
+<link rel="stylesheet" href="css/fonts-embedded.css?v=a9246bfa">
+<link rel="stylesheet" href="css/style.css?v=77207d27">
 <link rel="icon" href="data:,">
 </head>
 <body>
@@ -128,12 +128,15 @@
         </div>
       </section>
 
-      <section id="denmark" class="section" hidden>
+      <!-- The one composed section on the site. Its steps, the two photo
+           insets between them and the drawn connectors that link them are
+           all built by renderDenmark() in js/render.js from a layout table
+           that lives there: the arrangement is design, not copy, so it is
+           not repeated three times in content/*.json. -->
+      <section id="denmark" class="section cph" hidden>
         <p class="kicker" data-bind="denmark.kicker"></p>
         <h2 class="section-title" data-bind="denmark.title"></h2>
-        <p class="section-body" data-bind="denmark.body"></p>
-        <div class="photo-frame" id="denmark-photo" aria-hidden="true"></div>
-        <ol class="timeline" id="denmark-timeline"><!-- populated by render.js --></ol>
+        <ol class="cph-flow" id="denmark-flow"><!-- populated by render.js --></ol>
         <p class="section-note" data-bind="denmark.travelNote"></p>
       </section>
 
@@ -246,12 +249,12 @@
   </div>
 
   <script src="js/config.js?v=35b0850f" defer></script>
-  <script src="js/render.js?v=75d729ed" defer></script>
+  <script src="js/render.js?v=715fe16a" defer></script>
   <script src="js/i18n.js?v=be49d91f" defer></script>
   <script src="js/envelope.js?v=e0fccd62" defer></script>
   <script src="js/letter.js?v=9829543e" defer></script>
   <script src="js/paging.js?v=846bc5ab" defer></script>
-  <script src="js/main.js?v=cefe8475" defer></script>
+  <script src="js/main.js?v=158cdeae" defer></script>
   <script src="js/unlock.js?v=4085fe4a" defer></script>
 </body>
 </html>

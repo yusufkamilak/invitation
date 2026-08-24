@@ -106,7 +106,7 @@ const CONTENT_PRUNE = {
 
 // keys removed from content/details.json the same way.
 const DETAILS_PRUNE = {
-  s: ["denmark", "photos.denmark"],
+  s: ["denmark", "photos.denmarkCar", "photos.denmarkTable"],
   d: ["spain", "airbnb", "paypal", "photos.place"],
   b: [],
 };
@@ -114,12 +114,21 @@ const DETAILS_PRUNE = {
 // facts that must never appear in a pruned bundle for a given event — a
 // cheap leak assertion run on every build, on the exact plaintext that gets
 // encrypted.
+// A photo path is a fact like any other: assets/ is browsable on the public
+// repo, so a path left in the wrong bundle tells that guest exactly which
+// file to go and look at. Listing them here is what stops DETAILS_PRUNE
+// above from quietly rotting the next time a photo slot is added.
 const LEAK_CHECK = {
-  s: (details) => [details.denmark?.city].filter(Boolean),
+  s: (details) => [
+    details.denmark?.city,
+    details.photos?.denmarkCar,
+    details.photos?.denmarkTable,
+  ].filter(Boolean),
   d: (details) => [
     details.spain?.city,
     details.airbnb?.listingUrl,
     details.paypal?.link,
+    details.photos?.place,
     details.spain?.costPerPerson != null ? String(details.spain.costPerPerson) : null,
   ].filter(Boolean),
   b: () => [],

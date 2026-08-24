@@ -36,6 +36,12 @@ const FAMILIES = [
   // a warm literary serif rather than a delicate display one, because the
   // letter is meant to be read.
   { family: "Alegreya", axis: "wght@400" },
+  // The sage page: headings and body alike. Stands in for Maharlika, which
+  // the design was drawn in and which Canva does not release, on the same
+  // terms as the two above. Chosen over Prata, the closer match on paper,
+  // because Prata ships no latin-ext subset: every Turkish g-breve and
+  // s-cedilla would have fallen through to another face mid-word.
+  { family: "Gilda Display", axis: "wght@400" },
 ];
 
 // Google now serves these as variable fonts: asking for two weights returns

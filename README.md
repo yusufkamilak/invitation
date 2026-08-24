@@ -121,18 +121,29 @@ Anna,de,b,,
 
 ## Photos
 
-Two slots, both real photos. To swap one, keep the same filename (or update
-the path in `content/details.json`'s `photos` block) and re-run
+Three slots, all real photos. To swap one, keep the same filename (or
+update the path in `content/details.json`'s `photos` block) and re-run
 `node tools/build-invites.mjs`:
 
 - `ph-house.jpg` — `photos.place`, the inset in the Spain section (Spain
-  guests only).
-- `ph-denmark.jpg` — `photos.denmark`, the inset in the Denmark section
-  (Denmark guests only).
+  guests only). Shown 16:10 inside a hairline, so a subject near the top
+  or bottom edge will get cropped.
+- `ph-cph-car.jpg` — `photos.denmarkCar`, the first inset in the
+  Copenhagen section, beside "Reception" (Denmark guests only). 5:4 on a
+  wide screen, 4:3 on a phone.
+- `ph-cph-table.jpg` — `photos.denmarkTable`, the second inset, beside
+  "Dinner" (Denmark guests only). Slightly taller than square on a wide
+  screen, 4:3 on a phone.
 
-Both are shown 16:10 inside a thin gold mat, so anything with the subject
-near the top or bottom edge will get cropped. There is deliberately no
-photo on the card itself: it is type only.
+Adding a photo slot means four edits, not one: the path in
+`details.json`, the key in `DETAILS_PRUNE` **and** in `LEAK_CHECK` in
+`tools/build-invites.mjs`, and the entry in `CPH_FLOW` in `js/render.js`
+if it belongs to the Copenhagen section. Miss the prune and the path
+ships inside the bundles of guests who were never invited to that part;
+`assets/` is browsable on the public repo, so the path is the whole leak.
+`LEAK_CHECK` is what turns that from a convention into a build failure.
+
+There is deliberately no photo on the card itself: it is type only.
 
 Size them before committing. 1400px wide at quality 60 is about 250 to
 300 KB and still sharp at 2x in a frame that never renders wider than
@@ -141,6 +152,12 @@ Size them before committing. 1400px wide at quality 60 is about 250 to
 ```
 sips -s format jpeg -s formatOptions 60 --resampleWidth 1400 in.jpg --out assets/ph-house.jpg
 ```
+
+Never `--resampleWidth` *up*. The two Copenhagen photos were cut from a
+design mock rather than from originals and are only 537px and 497px wide;
+enlarging them would add a couple of hundred KB of interpolation and no
+detail. They are soft at 2x. If the originals turn up, drop them in at
+900px and they will look considerably better.
 
 Any slot left blank in `content/details.json` (`"place": ""`, etc.) is
 simply skipped — no broken image, the section just renders without a
@@ -154,8 +171,14 @@ thing that only shows up once links are already out:
 - **No em dashes or en dashes** anywhere in `content/*.json`. Use a comma,
   a colon, or a full stop. Check with
   `grep -n '[—–]' content/*.json` before building.
-- **No wedding vocabulary.** This is a dinner and a getaway, not a wedding.
-  That covers `Hochzeit`/`Trauung` and `düğün`/`nikah` too.
+- **No wedding vocabulary** *outside `denmark.steps`*. This is a dinner
+  and a getaway, not a wedding; that covers `Hochzeit`/`Trauung` and
+  `düğün`/`nikah` too. The five Copenhagen steps are a deliberate,
+  signed-off exception: they name the town hall and the vows because
+  that section is a transcription of the printed design. Everything else,
+  and the letter above all, still follows the rule. Don't "fix" the
+  Copenhagen copy back into line, and don't take it as licence to relax
+  the rule anywhere else.
 - **One or two short sentences per body.** Nothing over about 25 words.
 - **The letter names no place and no date.** It is the one block that goes
   to every guest unpruned. The build enforces the token rule; the wording
@@ -182,19 +205,30 @@ re-fetch them:
 node tools/make-fonts.mjs
 ```
 
-Three families, `latin` and `latin-ext` subsets only. latin carries the
+Four families, `latin` and `latin-ext` subsets only. latin carries the
 German umlauts, latin-ext the Turkish g-breve, s-cedilla and dotted
 capital I; everything else Google offers is dead weight for three
-languages. Playfair Display does the green page, Ms Madi is the script on
-the letter (title and names), Alegreya is the letter's body.
+languages. Gilda Display sets the sage page, headings and prose alike;
+Playfair Display is now the envelope's lettering and the names on the
+card; Ms Madi is the script on the letter (title and names); Alegreya is
+the letter's body.
 
-The two letter faces are stand-ins. The printed stationery uses Brittany
-Signature and 29LT Riwaya Informal; both are commercial, and since this
-repo is public the embedded base64 would redistribute them. Buying a
-webfont licence for either means adding the file locally and teaching
+**latin-ext is not optional.** `make-fonts.mjs` prints one line per
+subset it keeps, and a display face has to show both. Prata was the first
+choice for the sage page and is the closer match to the design, but
+Google ships it with no latin-ext at all, so every Turkish g-breve and
+s-cedilla dropped through to the next family in the stack, mid-word.
+Check the script's output before assuming a swap worked.
+
+Three of the four faces are stand-ins. The printed stationery uses
+Brittany Signature and 29LT Riwaya Informal, and the Copenhagen section
+was designed in Maharlika; all three are commercial or Canva-only, and
+since this repo is public the embedded base64 would redistribute them.
+Buying a webfont licence means adding the file locally and teaching
 `make-fonts.mjs` to read from disk as well as from Google, then changing
-`--script` / `--serif-body` in `css/style.css` and the two family names
-`whenFontsReady()` waits on in `js/letter.js`.
+`--script` / `--serif-body` / `--display-family` in `css/style.css` and,
+for the two letter faces only, the family names `whenFontsReady()` waits
+on in `js/letter.js`.
 
 Google now serves these as variable fonts, so asking for two weights
 returns two `@font-face` blocks pointing at the *same* file. The script

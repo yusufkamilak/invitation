@@ -687,12 +687,20 @@ main { overflow-x: hidden; }
   transition-delay: calc(var(--i, 0) * 0.07s);
 }
 
-/* Every section opens the same way: a kicker over a title, both centred,
-   with the body copy that follows left aligned under them. Centring the
-   heading and not the prose is the whole rule. Prose set to a measure is
-   ragged on its right edge by design, and centring it rags both edges and
-   moves the start of every line, which is the one thing a reader's eye
-   needs to stay put.
+/* Every section opens the same way: a kicker over a title, and then the
+   one paragraph that answers them. All three are centred, and the rule
+   that decides it is not prose-versus-heading but one-versus-many. A
+   paragraph that stands alone under a centred title has nothing to line up
+   with except that title, and left aligning it reads as a slip rather than
+   as a margin. Anything that comes in a set stays left: the flow steps,
+   the check list rows, the FAQ questions, the form fields. A set is read
+   down its left edge, and centring would move the start of every line
+   in it.
+
+   Prose set to a measure is still ragged on its right edge by design, and
+   centring rags both. That is affordable at the one to three lines these
+   paragraphs run to and would not be over a long left aligned run, which
+   is why the measures below stay short.
 
    .sub-title is deliberately not in here. It heads left aligned lists
    ("Bring", "Or just ask us something") and would float away from them.
@@ -720,8 +728,20 @@ main { overflow-x: hidden; }
   color: var(--bone);
   max-width: 42ch;
 }
-.section-body { max-width: 40ch; }
-.section-note { color: var(--forest-deep); font-size: var(--step--1); max-width: 44ch; margin-top: var(--space-3); }
+/* The two standalone paragraphs, and the only members of the prose rule
+   above that centre. .flow-body is pointedly not given this: it is the copy
+   inside a flow step, and a step is one of a set. The auto margin is not
+   optional next to the text-align. Each of these carries a measure, and
+   without it the words would centre inside a box still hugging the left. */
+.section-body { max-width: 40ch; margin-inline: auto; text-align: center; }
+.section-note {
+  color: var(--forest-deep);
+  font-size: var(--step--1);
+  max-width: 44ch;
+  margin-top: var(--space-3);
+  margin-inline: auto;
+  text-align: center;
+}
 
 /* ============================================================
    The card (the invitation itself)
@@ -890,9 +910,10 @@ main { overflow-x: hidden; }
 
    A centred opening: the place, the dates, how far it is from the
    airport, a map that is also the link to it, the address. Then the
-   house, left aligned like every other section, because everything
-   below the address is prose and centred prose at 40ch is ragged on
-   both sides and stops being readable after about two lines.
+   house, centred too: it is two lines about one building, standing on
+   its own under everything above it, and it is held at 40ch so that
+   centring it never costs more than those two lines. The photographs
+   under it are a set and keep their own left edge.
 
    The gold mat is gone with the gold. Every photograph on the sage,
    here and in Copenhagen, sits flush inside a single hairline.
@@ -1302,10 +1323,10 @@ main { overflow-x: hidden; }
    middle, rather than sitting alone in the left column looking abandoned. */
 .flow-tight .flow-step.side-center { text-align: center; }
 .flow-tight .flow-step.side-center .flow-body { margin-inline: auto; }
-/* Flush with the grid below it, not centred under the title above it.
-   Copenhagen does the same thing: a centred heading, then "Town hall" on
-   the left margin. An indented block between the two would read as a
-   third alignment nobody asked for. */
+/* Centred under the title above it, not flush with the grid below. The
+   lead answers "What we have in mind" and belongs to it; the days are a
+   set and keep their own left edges, which is the same two alignments
+   Copenhagen has. Everything but the measure comes from .section-body. */
 .plan-lead { max-width: 46ch; margin-bottom: var(--space-2); }
 
 .flow-photo {

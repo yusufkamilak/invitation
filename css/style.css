@@ -865,7 +865,26 @@ main { overflow-x: hidden; }
   width: min(100%, 30rem);
 }
 .card-meta:empty { display: none; }
-.card-meta-item { min-width: 9rem; }
+/* A column, so its jump pill can be pushed to the foot of it. */
+.card-meta-item {
+  min-width: 9rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+/* Only rendered when the guest has more than one part. It is the whole of
+   the "one occasion, in two parts" signal, so it sits in --forest with the
+   headings rather than in --forest-deep with the labels below it. It
+   matters most on a phone, where .card-meta's two 9rem columns and 5rem
+   gap no longer fit side by side and the parts stack. */
+.meta-ordinal {
+  font-family: var(--display);
+  font-size: var(--step--1);
+  letter-spacing: 0.18em;
+  color: var(--forest);
+  opacity: 0.75;
+  margin-bottom: 0.35rem;
+}
 .meta-place {
   font-size: var(--step--1);
   letter-spacing: 0.2em;
@@ -876,6 +895,36 @@ main { overflow-x: hidden; }
 .meta-row { display: flex; justify-content: center; gap: 0.6rem; }
 .meta-label { color: var(--forest-deep); font-size: var(--step--1); }
 .meta-value { font-family: var(--display); color: var(--forest-deep); font-size: var(--step--1); }
+
+/* Two parts get two equal grid columns instead of the flex row, so the
+   pill at the foot of each one lines up with the pill beside it however
+   different the two columns' contents are. auto-fit collapses them to a
+   single column on a narrow phone, taking each pill down with its own
+   part. A one-part guest never gets this class and stays on the flex row
+   above, unchanged. */
+.card-meta.is-paired {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  justify-items: center;
+  /* gap and width stay on .card-meta above: one source of truth, so the
+     row and the grid can never drift apart. */
+}
+
+/* Lighter than a section's .btn. This is a shortcut, not a call to action,
+   and it sits under a place name set in the same uppercase tracking, so it
+   has to read as the quieter of the two.
+
+   Copenhagen has one date row and Barcelona two, so the two columns are
+   never the same height: margin-top: auto absorbs the difference and sits
+   both pills on the same line, and the margin under the last row is what
+   keeps the taller column, where there is no slack to absorb, from closing
+   the gap up altogether. */
+.card-jump {
+  margin-top: auto;
+  padding: 0.6rem 1.25rem;
+  letter-spacing: 0.14em;
+}
+.card-meta.is-paired .meta-row:last-of-type { margin-bottom: var(--space-3); }
 
 .card-foot {
   margin-top: var(--space-4);

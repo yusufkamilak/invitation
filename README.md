@@ -58,6 +58,19 @@ breaks: the `sectionForKey` map in `js/render.js`, the matching entry in
 in `index.html`. Forget the prune entry and content leaks; forget
 `sectionForKey` and the wrong guest sees an empty section.
 
+There is a fourth place, and it is deliberately copy-free: the `places`
+array in `renderCardMeta()` (`js/render.js`). A guest invited to more than
+one part gets a roman numeral over each place on the card and a pill at the
+foot of each column linking to that part's own section. Both are built from
+whichever of `details.denmark` / `details.spain` survived the prune, so a
+one-part guest gets neither, which is the point: the numeral is what says
+"one occasion, in two parts" without a sentence, and a sentence on the card
+would reach every guest unpruned and tell a one-part guest there is a
+second part. Keep it that way. If a third part is ever added, give it a
+`section` in that array and a third entry in `ORDINALS` above it; nothing
+in `content/*.json` needs to change, because the pills are labelled with
+the city and the city already comes from the bundle.
+
 Caveat: the repo itself is public, so everything under `assets/` is
 browsable on GitHub regardless of event. The `fl-*.webp` florals on the
 letter are generic watercolours and say nothing about anyone, but the

@@ -219,6 +219,14 @@ window.WeddingRender = (function () {
     el.appendChild(b);
   }
 
+  // Numerals, not copy. They are the whole of the "these two are one
+  // occasion in two parts" signal, and it is carried structurally on
+  // purpose: the card is not pruned, so a sentence saying as much would
+  // reach every guest, and telling a Copenhagen-only guest there is a
+  // second part is the one thing the build spends its effort preventing.
+  // Roman also needs no translating.
+  var ORDINALS = ["I", "II", "III"];
+
   // The at-a-glance block under the greeting: one column per place the
   // guest is actually invited to, so a Denmark-only guest sees one column
   // and a both-parts guest sees two.
@@ -227,16 +235,23 @@ window.WeddingRender = (function () {
     var d = bundle.details;
     wrap.innerHTML = "";
 
+    // `section` is the id this part's own section carries in index.html,
+    // which the jump pill below turns into a link. It is not a second list
+    // of what belongs to whom: the presence of d.denmark / d.spain is
+    // still the only test, exactly as applyEventScope() uses the content
+    // keys.
     var places = [];
     if (d.denmark) {
       places.push({
         place: d.denmark.city,
+        section: "denmark",
         rows: [{ label: c.card.dateLabel, value: ctx.denmarkDate }],
       });
     }
     if (d.spain) {
       places.push({
         place: d.spain.city,
+        section: "place",
         rows: [
           { label: c.card.arriveLabel, value: ctx.checkin },
           { label: c.card.departLabel, value: ctx.checkout },
@@ -244,10 +259,37 @@ window.WeddingRender = (function () {
       });
     }
 
+    // One column is just a fact about a date and needs no numbering; two
+    // are a sequence, and saying so is the point of the whole block.
+    var numbered = places.length > 1;
+    // is-paired turns the block into two equal grid columns, each carrying
+    // its own jump pill. A guest with one part stays on the plain flex row
+    // and gets no pill at all: there would be nothing to choose between,
+    // and a lone pill beside the scroll cue is furniture.
+    wrap.classList.toggle("is-paired", numbered);
+
+    // Belt and braces. applyEventScope() removes the sections this guest
+    // was not invited to before any of this runs, so both ids are here for
+    // a two-part guest; if one ever were not, drop the pills entirely
+    // rather than leave one column with a way out and the other without.
+    var withJumps = numbered && places.every(function (p) {
+      return p.section && document.getElementById(p.section);
+    });
+
     places.forEach(function (p, i) {
       var item = document.createElement("div");
       item.className = "card-meta-item";
       item.style.setProperty("--i", i);
+      if (numbered) {
+        // aria-hidden: the place name directly below is the real label,
+        // and "I, Copenhagen" read out is noise. The ordinal is doing
+        // visual work only.
+        var ord = document.createElement("p");
+        ord.className = "meta-ordinal";
+        ord.setAttribute("aria-hidden", "true");
+        ord.textContent = ORDINALS[i] || String(i + 1);
+        item.appendChild(ord);
+      }
       var head = document.createElement("p");
       head.className = "meta-place";
       head.textContent = p.place;
@@ -265,6 +307,18 @@ window.WeddingRender = (function () {
         line.appendChild(v);
         item.appendChild(line);
       });
+      // Inside the column, not in a row of their own underneath it. On a
+      // phone the two columns stack, and a shared row would put the
+      // Copenhagen pill below the whole Barcelona column, a screen away
+      // from the part it belongs to. Labelled with the city, which already
+      // comes from the pruned bundle, so this adds nothing to translate.
+      if (withJumps) {
+        var jump = document.createElement("a");
+        jump.className = "btn btn-line card-jump";
+        jump.href = "#" + p.section;
+        jump.textContent = p.place;
+        item.appendChild(jump);
+      }
       wrap.appendChild(item);
     });
   }

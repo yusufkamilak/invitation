@@ -560,17 +560,19 @@ window.WeddingRender = (function () {
     if (!c.place) return;
     var d = bundle.details;
 
-    // Two lines, because the design sets it on two. Splitting one string
-    // on its commas would be guesswork, so details.json holds the lines.
+    // Set on one line, the way you would write an address out, rather than
+    // stacked the way the printed design sets it. details.json still holds
+    // it as separate lines: that is what the printed piece needs, it is
+    // what the leak assertion in tools/build-invites.mjs iterates, and
+    // splitting a joined string back on its commas would be guesswork.
+    // Joining is the direction that cannot get it wrong.
     var addr = document.getElementById("place-address");
     var lines = (d.airbnb.addressLines || []).filter(Boolean);
-    if (!lines.length) lines = [c.place.addressTBD];
+    var text = lines.length ? lines.join(", ") : c.place.addressTBD;
     addr.innerHTML = "";
-    lines.forEach(function (line) {
-      var span = document.createElement("span");
-      span.textContent = line;
-      addr.appendChild(span);
-    });
+    var span = document.createElement("span");
+    span.textContent = text;
+    addr.appendChild(span);
 
     // The map is a link with a picture in it rather than a framed
     // background like the rest: it is the one image here that is also a

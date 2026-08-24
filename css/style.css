@@ -1030,12 +1030,14 @@ main { overflow-x: hidden; }
 }
 .section.is-visible .map-link img { transform: scale(1); opacity: 1; }
 
-/* A grid rather than a flex row, because the address is two lines and the
-   pin belongs beside the first of them, not centred against both. Two
-   columns: the pin in the first, every line stacked in the second. */
+/* One line now, so a plain row does what the two column grid used to.
+   align-items: start rather than baseline is still load-bearing: the line
+   is long enough to wrap on a narrow phone, and the pin belongs beside the
+   first line of it, not centred against both. text-align keeps a wrapped
+   second line on the same left edge as the first instead of under the
+   pin. */
 .place-address {
-  display: inline-grid;
-  grid-template-columns: auto auto;
+  display: inline-flex;
   align-items: start;
   gap: 0 0.5rem;
   text-align: left;
@@ -1044,8 +1046,6 @@ main { overflow-x: hidden; }
   letter-spacing: 0.03em;
   line-height: 1.5;
 }
-.place-address::before { grid-column: 1; grid-row: 1; }
-.place-address span { grid-column: 2; }
 /* The hero ends here. Without this the prose about the house starts one
    line under the postcode and reads as a third line of the address. */
 .place-hero { margin-bottom: var(--space-3); }

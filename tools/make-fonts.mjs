@@ -21,6 +21,8 @@ const UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
   "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
+// The default for every face that sets copy. A family may narrow it with its
+// own `subsets` below, and exactly one does.
 const KEEP = new Set(["latin", "latin-ext"]);
 
 const FAMILIES = [
@@ -42,6 +44,21 @@ const FAMILIES = [
   // because Prata ships no latin-ext subset: every Turkish g-breve and
   // s-cedilla would have fallen through to another face mid-word.
   { family: "Gilda Display", axis: "wght@400" },
+  // The names on the card, and nothing else. The card IS the invitation, and
+  // wants the lettering an invitation is engraved in; Playfair's italic, which
+  // used to set it, is the envelope's hand and reads as a heading beside it.
+  // A second script rather than Ms Madi above: that one is the letter's
+  // signature, one screen up, and the card must not read as a repeat of it.
+  //
+  // The one family here that takes only `latin`, and the only one that may.
+  // .card-names renders couple.partnerA, an ampersand and couple.partnerB from
+  // content/details.json and nothing else: never a guest's name, never
+  // translated copy, so no Turkish g-breve or s-cedilla can reach it. Google
+  // does ship a latin-ext for this face, and it is 60 KB of base64 on a
+  // render-blocking stylesheet to cover two names that don't need it. If the
+  // couple's names ever gain a latin-ext character, drop the `subsets` line
+  // below and it comes back.
+  { family: "Great Vibes", axis: "wght@400", subsets: ["latin"] },
 ];
 
 // Google now serves these as variable fonts: asking for two weights returns
@@ -73,7 +90,9 @@ const out = [
 
 let total = 0;
 
-for (const { family, axis } of FAMILIES) {
+for (const { family, axis, subsets } of FAMILIES) {
+  // Per-family override of KEEP. Only one face uses it; see Great Vibes above.
+  const keep = subsets ? new Set(subsets) : KEEP;
   const url =
     "https://fonts.googleapis.com/css2?family=" +
     encodeURIComponent(family).replace(/%20/g, "+") +
@@ -84,7 +103,7 @@ for (const { family, axis } of FAMILIES) {
   const faces = new Map(); // woff2 url -> { style, range, weights:Set }
   for (const block of css.split("/*").slice(1)) {
     const subset = block.slice(0, block.indexOf("*/")).trim();
-    if (!KEEP.has(subset)) continue;
+    if (!keep.has(subset)) continue;
 
     const src = /url\((https:[^)]+\.woff2)\)/.exec(block)[1];
     const weight = Number(/font-weight:\s*(\d+)/.exec(block)[1]);

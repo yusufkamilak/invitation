@@ -58,18 +58,24 @@ breaks: the `sectionForKey` map in `js/render.js`, the matching entry in
 in `index.html`. Forget the prune entry and content leaks; forget
 `sectionForKey` and the wrong guest sees an empty section.
 
-There is a fourth place, and it is deliberately copy-free: the `places`
-array in `renderCardMeta()` (`js/render.js`). A guest invited to more than
-one part gets a roman numeral over each place on the card and a pill at the
-foot of each column linking to that part's own section. Both are built from
-whichever of `details.denmark` / `details.spain` survived the prune, so a
-one-part guest gets neither, which is the point: the numeral is what says
-"one occasion, in two parts" without a sentence, and a sentence on the card
-would reach every guest unpruned and tell a one-part guest there is a
-second part. Keep it that way. If a third part is ever added, give it a
-`section` in that array and a third entry in `ORDINALS` above it; nothing
-in `content/*.json` needs to change, because the pills are labelled with
-the city and the city already comes from the bundle.
+There is a fourth place, and it carries no fact about either part: the
+`places` array in `renderCardMeta()` (`js/render.js`). A guest invited to
+more than one part gets a roman numeral over each place on the card and a
+pill at the foot of each column linking to that part's own section. Which
+columns exist is decided by whichever of `details.denmark` /
+`details.spain` survived the prune, so a one-part guest gets neither, which
+is the point: the numeral is what says "one occasion, in two parts" without
+a sentence, and a sentence on the card would reach every guest unpruned and
+tell a one-part guest there is a second part. Keep it that way. If a third
+part is ever added, give it a `section` in that array and a third entry in
+`ORDINALS` above it.
+
+The pills read `card.jumpLabel` ("Details"), one shared string for both.
+That key lives in `card` and not in `denmark` / `place` for the same
+reason: `CONTENT_PRUNE` deletes whole top-level keys, and `card` is the one
+block every guest keeps whatever they were invited to, so the label can
+never come back empty. It used to be the city name, which said nothing the
+`.meta-place` heading directly above the pill had not already said.
 
 The countdown is part of the same idea. `renderCardMeta()` moves the live
 `#countdown` element out of `.card-foot` and into the column of the date it
@@ -270,22 +276,30 @@ re-fetch them:
 node tools/make-fonts.mjs
 ```
 
-Four families, `latin` and `latin-ext` subsets only. latin carries the
+Five families, `latin` and `latin-ext` subsets only. latin carries the
 German umlauts, latin-ext the Turkish g-breve, s-cedilla and dotted
 capital I; everything else Google offers is dead weight for three
 languages. Gilda Display sets the sage page, headings and prose alike;
-Playfair Display is now the envelope's lettering and the names on the
-card; Ms Madi is the script on the letter (title and names); Alegreya is
+Great Vibes sets the couple's names on the card; Playfair Display is the
+envelope's lettering, the address and the & in the seal, and nothing else
+now; Ms Madi is the script on the letter (title and names); Alegreya is
 the letter's body.
 
-**latin-ext is not optional.** `make-fonts.mjs` prints one line per
-subset it keeps, and a display face has to show both. Prata was the first
-choice for the sage page and is the closer match to the design, but
-Google ships it with no latin-ext at all, so every Turkish g-breve and
-s-cedilla dropped through to the next family in the stack, mid-word.
-Check the script's output before assuming a swap worked.
+**latin-ext is not optional**, with exactly one exception. `make-fonts.mjs`
+prints one line per subset it keeps, and a face that sets copy has to show
+both. Prata was the first choice for the sage page and is the closer match
+to the design, but Google ships it with no latin-ext at all, so every
+Turkish g-breve and s-cedilla dropped through to the next family in the
+stack, mid-word. Check the script's output before assuming a swap worked.
 
-Three of the four faces are stand-ins. The printed stationery uses
+The exception is Great Vibes, which takes `subsets: ["latin"]` in
+`FAMILIES`. `.card-names` renders `couple.partnerA`, an ampersand and
+`couple.partnerB` out of `details.json` and nothing else: no guest name and
+no translated string can reach it, so its latin-ext (60 KB of base64 on a
+render-blocking stylesheet) covers nothing. Drop that line and it comes
+back. No other family may narrow its subsets.
+
+Three of the five faces are stand-ins. The printed stationery uses
 Brittany Signature and 29LT Riwaya Informal, and the Copenhagen section
 was designed in Maharlika; all three are commercial or Canva-only, and
 since this repo is public the embedded base64 would redistribute them.

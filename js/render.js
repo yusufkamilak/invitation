@@ -348,13 +348,21 @@ window.WeddingRender = (function () {
       // Inside the column, not in a row of their own underneath it. On a
       // phone the two columns stack, and a shared row would put the
       // Copenhagen pill below the whole Barcelona column, a screen away
-      // from the part it belongs to. Labelled with the city, which already
-      // comes from the pruned bundle, so this adds nothing to translate.
+      // from the part it belongs to.
+      //
+      // One shared word, not the city. The city is printed directly above
+      // the pill in .meta-place, so a pill repeating it said nothing; the
+      // column it sits in is already the whole of "which part is this".
+      // The string lives in content.card because CONTENT_PRUNE deletes
+      // whole top-level keys and `card` is the one block every guest keeps
+      // whatever they were invited to. The fallback is not decoration: it
+      // keeps a bundle built before that key existed from rendering an
+      // empty pill.
       if (withJumps) {
         var jump = document.createElement("a");
         jump.className = "btn btn-line card-jump";
         jump.href = "#" + p.section;
-        jump.textContent = p.place;
+        jump.textContent = c.card.jumpLabel || p.place;
         item.appendChild(jump);
       }
       wrap.appendChild(item);
@@ -388,15 +396,16 @@ window.WeddingRender = (function () {
       { kind: "photo", photo: "denmarkTable", side: "right", id: "denmark-photo-2" },
       { kind: "step",  step: 4, side: "left" },
     ],
-    // Five days, two abreast, one connector, no photographs. The stroke
-    // goes between the two rows rather than beside a step: here it is the
-    // seam through the block, not a link from one step down to the next.
+    // Five days, two abreast, no photographs and no connectors. There was
+    // one stroke, sitting in the seam between the two rows. Copenhagen's
+    // read as links because each leaves a named step and arrives at
+    // another; this one had nothing to join across a tidy two-by-two block
+    // and read as a squiggle dropped into the middle of it.
     // The fifth day has nobody to sit beside, so it goes under both
     // columns rather than alone in the left one.
     plan: [
       { kind: "step", step: 0, side: "left"   },
       { kind: "step", step: 1, side: "right"  },
-      { kind: "link", shape: "c" },
       { kind: "step", step: 2, side: "left"   },
       { kind: "step", step: 3, side: "right"  },
       { kind: "step", step: 4, side: "center" },
@@ -405,14 +414,16 @@ window.WeddingRender = (function () {
 
   // The connectors. Each is one unbroken pen stroke with a loop in it, and
   // no two repeat, which is what makes them read as drawn rather than
-  // placed. Two variants apiece: a viewBox cannot be changed from a
-  // stylesheet, so the wide loop the zig-zag uses and the tall one the
-  // single column needs have to be separate elements, shown by the
-  // breakpoint.
+  // placed. Copenhagen is the only section that uses them. Two variants
+  // apiece: a viewBox cannot be changed from a stylesheet, so the wide loop
+  // the zig-zag uses and the tall one the single column needs have to be
+  // separate elements, shown by the breakpoint.
   //
-  // The plan reuses c. A guest invited to both parts therefore meets that
-  // stroke twice, four sections apart, so .flow-tight mirrors it in the
-  // stylesheet: the same hand rather than the same drawing.
+  // Direction matters as much as shape, and it is not settled here: a is
+  // drawn left to right and c is drawn the same way but has to link a right
+  // step down to a left one, so the stylesheet mirrors c. Where each stroke
+  // starts and ends relative to the steps it joins is the .flow-link.shape-*
+  // block in css/style.css.
   var LINK_PATHS = {
     // Falls out of the first step, ties a knot, runs away to the right.
     a: {

@@ -380,6 +380,12 @@ input, textarea { font: inherit; color: inherit; }
   border-radius: inherit;
   pointer-events: none;
 }
+/* Each box below is given its painting's own aspect ratio. With `contain`, a
+   box of any other shape letterboxes the painting inside itself, and then
+   neither the painted size nor its centre follows from `width` any more, and a
+   translate percentage measures against the box rather than the paint. Match
+   the two and width, translate and rotation go back to being three independent
+   numbers. */
 .letter-flora .fl {
   position: absolute;
   background-repeat: no-repeat;
@@ -387,6 +393,9 @@ input, textarea { font: inherit; color: inherit; }
 }
 /* Sized against the paper, not the viewport: the paper is no longer the
    full screen, so a vw width would swell to a third of it on a desktop.
+   Plain percentages, with no rem cap over them: the paper already stops at
+   44rem, so a cap only ever shrank the corners on a wide screen, and these
+   four numbers are measured off the printed card and want to survive intact.
    Each piece is pinned flush to its corner and then pushed off it by a
    translate, which resolves against the piece's own box rather than the
    paper's. That is the whole reason for the translate: a top/left percentage
@@ -402,52 +411,60 @@ input, textarea { font: inherit; color: inherit; }
 .fl-tl {
   top: 0;
   left: 0;
-  width: min(30%, 11rem);
-  aspect-ratio: 12 / 19;
+  width: 17%;
+  aspect-ratio: 522 / 900;
   background-image: url("../assets/fl-sprig.webp");
   transform-origin: center;
   /* Past upside down. The sprig is painted growing upward, and this corner
      wants it entering from the top edge and cascading down-left, off the
      side of the paper. Anything short of about 210deg cascades it down and
      to the right instead, in toward the writing, which is the one direction
-     this corner must not send it. */
-  transform: translate(-24%, -13%) rotate(222deg);
+     this corner must not send it. 238deg is where it lies along the same
+     diagonal the printed card puts it on; a couple of degrees either side is
+     visible, because the leaves are thin and the edge crops most of them. */
+  transform: translate(-8%, -35%) rotate(238deg);
 }
-/* The only mirrored piece. The stem trails to the left of its bloom in the
-   painting, which on this corner sends it inward across the writing; flipped,
-   it runs down the paper's right edge the way it does on the printed card.
-   The mirror is about the piece's own centre, not about the right edge: a
-   scaleX taken about the edge reflects the whole box across it and throws
-   the painting clean off the paper. */
+/* Not mirrored, though it looks as though it ought to be. The stem trails to
+   the left of its bloom in the painting; turning the whole piece anticlockwise
+   swings the stem out from under the bloom and down the paper's right edge,
+   and tips the bloom left at the same time. A scaleX gets the stem to roughly
+   the same place but leaves the bloom sitting upright, which is not what the
+   printed card does. */
 .fl-tr {
   top: 0;
   right: 0;
-  width: min(26%, 9.5rem);
-  aspect-ratio: 9.5 / 17;
+  width: 14.3%;
+  aspect-ratio: 522 / 900;
   background-image: url("../assets/fl-stem.webp");
   transform-origin: center;
-  transform: translateY(5%) scaleX(-1) rotate(-10deg);
+  transform: translate(15.5%, -9%) rotate(-56deg);
 }
-/* The one piece with no rotation. It is a bloom seen face on, so an angle
-   only makes it look tipped over; the corner does the framing instead. */
+/* The one piece with no rotation, and the outline is not what says so: a poppy
+   seen face on reads much the same at any angle, and both an outline match and a
+   greyscale one sit almost flat as it turns. The veins are what settle it. They
+   run from the dark centre out to the petal edges, and on the printed card they
+   run the way the painting was made, so any angle at all shows as veins leaning
+   against the pale streak above the centre. */
 .fl-bl {
   bottom: 0;
   left: 0;
-  width: min(34%, 12.5rem);
-  aspect-ratio: 15 / 14;
+  width: 20.6%;
+  aspect-ratio: 986 / 900;
   background-image: url("../assets/fl-poppy.webp");
-  transform: translate(-35%, 39%);
+  transform: translate(-28%, 24%);
 }
 .fl-br {
   right: 0;
   bottom: 0;
-  width: min(26%, 9.5rem);
-  aspect-ratio: 11 / 18;
+  width: 17%;
+  aspect-ratio: 522 / 900;
   background-image: url("../assets/fl-sprig.webp");
   transform-origin: center;
-  /* Barely off vertical. Laid flatter it stops being a branch standing in
-     the corner and becomes a leaf lying across the foot of the letter. */
-  transform: translate(28%, 18%) rotate(-8deg);
+  /* Laid well over, so it climbs the corner on a diagonal rather than standing
+     upright in it. Near vertical it reads as a branch propped against the edge;
+     at 41deg it reads as the top-left sprig again, entering from the far side,
+     which is what makes the two corners answer each other. */
+  transform: translate(17%, 31%) rotate(41deg);
 }
 
 .letter-inner {
@@ -587,12 +604,6 @@ input, textarea { font: inherit; color: inherit; }
   .letter-names { font-size: max(1.3rem, min(clamp(1.5rem, 1.05rem + 2.2vw, 2.2rem), 4.2vh)); }
   .letter-hint { margin-top: var(--space-1); }
 
-  /* The paper shrinks faster than the type does, so at this size the corner
-     pieces start crowding the title and the names. Frame, don't crowd. */
-  .fl-tl { width: min(23%, 6.5rem); }
-  .fl-tr { width: min(20%, 5.75rem); }
-  .fl-bl { width: min(27%, 8.25rem); }
-  .fl-br { width: min(20%, 5.75rem); }
   .lang-switch { top: var(--space-2); right: var(--space-2); }
   .lang-switch button { padding: 0.25rem 0.5rem; font-size: 0.65rem; }
 }

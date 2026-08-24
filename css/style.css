@@ -1175,7 +1175,12 @@ main { overflow-x: hidden; }
   transform: rotate(45deg);
 }
 
-.button-row { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: var(--space-2); }
+/* Centred, because the only row of buttons on the page sits in #place,
+   between the house paragraph above it and the closing note below, both of
+   which are centred. Left aligned it was the one thing in that run holding
+   the section's left edge. Still a flex row rather than a text-align, so a
+   second button would pair with the first across the centre. */
+.button-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.75rem; margin-top: var(--space-2); }
 .btn {
   display: inline-flex;
   align-items: center;

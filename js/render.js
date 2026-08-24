@@ -28,16 +28,43 @@ window.WeddingRender = (function () {
     });
   }
 
+  var LOCALES = { en: "en-GB", tr: "tr-TR", de: "de-DE" };
+
   function fmtDate(iso, lang) {
     if (!iso) return "";
     var d = new Date(iso + "T00:00:00");
     if (isNaN(d.getTime())) return iso;
-    var locale = { en: "en-GB", tr: "tr-TR", de: "de-DE" }[lang] || "en-GB";
-    return new Intl.DateTimeFormat(locale, { day: "numeric", month: "long", year: "numeric" }).format(d);
+    return new Intl.DateTimeFormat(LOCALES[lang] || "en-GB", { day: "numeric", month: "long", year: "numeric" }).format(d);
+  }
+
+  // "2-6 September 2027". Intl formats a range as one unit, so the month
+  // and the year are written once and each locale keeps its own shape:
+  // de-DE wants "2.-6. September 2027", which is not the English one
+  // translated.
+  //
+  // Two normalisations on the way out. Intl joins a range with an en dash,
+  // and tr-TR pads that dash with thin spaces. content/*.json is written
+  // to a no-dashes house rule (see README), and a date assembled at
+  // runtime should not be the one line on the page that breaks it.
+  function fmtDateRange(from, to, lang) {
+    if (!from) return "";
+    var a = new Date(from + "T00:00:00");
+    var b = to ? new Date(to + "T00:00:00") : null;
+    if (isNaN(a.getTime())) return from;
+    var fmt = new Intl.DateTimeFormat(LOCALES[lang] || "en-GB", {
+      day: "numeric", month: "long", year: "numeric",
+    });
+    var out;
+    // formatRange is Safari 14.1 and up. Anything older gets two whole
+    // dates joined by hand: longer, never wrong.
+    if (!b || isNaN(b.getTime())) out = fmt.format(a);
+    else if (typeof fmt.formatRange === "function") out = fmt.formatRange(a, b);
+    else out = fmt.format(a) + " - " + fmt.format(b);
+    return out.replace(/[\u2009\u202f]/g, "").replace(/[\u2013\u2014]/g, "-");
   }
 
   function fmtCost(amount, currency, lang) {
-    var locale = { en: "en-GB", tr: "tr-TR", de: "de-DE" }[lang] || "en-GB";
+    var locale = LOCALES[lang] || "en-GB";
     try {
       return new Intl.NumberFormat(locale, { style: "currency", currency: currency, maximumFractionDigits: 0 }).format(amount);
     } catch (err) {
@@ -67,6 +94,10 @@ window.WeddingRender = (function () {
       spainCity: hasSpain ? d.spain.city : "",
       checkin: hasSpain ? fmtDate(d.spain.checkin, lang) : "",
       checkout: hasSpain ? fmtDate(d.spain.checkout, lang) : "",
+      spainDates: hasSpain ? fmtDateRange(d.spain.checkin, d.spain.checkout, lang) : "",
+      // A number, not "30 min": the unit is a word and belongs in the
+      // three copy files, not in details.json.
+      airportMinutes: hasSpain && d.spain.airportMinutes != null ? d.spain.airportMinutes : "",
       nights: nights != null ? nights : "",
       cost: hasSpain ? fmtCost(d.spain.costPerPerson, d.spain.currency, lang) : "",
     };
@@ -94,6 +125,14 @@ window.WeddingRender = (function () {
     // data-bind-attr-placeholder="a.b.c" -> placeholder attribute
     root.querySelectorAll("[data-bind-attr-placeholder]").forEach(function (el) {
       el.setAttribute("placeholder", t(lookup(c, el.getAttribute("data-bind-attr-placeholder")) || "", ctx));
+    });
+    // data-bind-attr-aria-label="a.b.c" -> the aria-label attribute. The
+    // map link and the photo scroller are both controls whose whole
+    // accessible name is copy, and both have to change language when the
+    // page does, so the name lives here with the rest of the copy rather
+    // than being set once from renderPlace.
+    root.querySelectorAll("[data-bind-attr-aria-label]").forEach(function (el) {
+      el.setAttribute("aria-label", t(lookup(c, el.getAttribute("data-bind-attr-aria-label")) || "", ctx));
     });
   }
 
@@ -135,7 +174,7 @@ window.WeddingRender = (function () {
     body.innerHTML = "";
     (c.letter.body || []).forEach(function (para, i) {
       var p = document.createElement("p");
-      // Same --i stagger idiom the timeline and FAQ lists already use.
+      // Same --i stagger idiom the flow steps and the FAQ list already use.
       p.style.setProperty("--i", i);
       p.textContent = t(para, ctx);
       body.appendChild(p);
@@ -230,57 +269,47 @@ window.WeddingRender = (function () {
     });
   }
 
-  // ---- sections ----
+  // ---- the composed sections ----
 
-  function renderTimeline(ol, steps, ctx) {
-    if (!ol) return;
-    ol.innerHTML = "";
-    (steps || []).forEach(function (step, i) {
-      var li = document.createElement("li");
-      li.className = "timeline-item";
-      li.style.setProperty("--i", i);
-      // t() hands back a non-string unchanged, so a step with no label
-      // would render the literal text "undefined" rather than nothing.
-      var label = document.createElement("p");
-      label.className = "timeline-label";
-      label.textContent = step.label ? t(step.label, ctx) : "";
-      var title = document.createElement("p");
-      title.className = "timeline-title";
-      title.textContent = t(step.title, ctx);
-      var body = document.createElement("p");
-      body.className = "timeline-body";
-      body.textContent = t(step.body, ctx);
-      li.appendChild(label);
-      li.appendChild(title);
-      li.appendChild(body);
-      ol.appendChild(li);
-    });
-  }
-
-  // ---- Copenhagen: a composed section rather than a list ----
-
-  // The design interleaves two photographs and three drawn connectors
-  // between five named steps, alternating left and right down the page.
-  // That arrangement lives here rather than in content/*.json, because it
-  // is layout and would otherwise have to be kept identical in three
-  // languages by hand.
+  // Two sections are composed rather than listed: Copenhagen, which
+  // interleaves two photographs and three drawn connectors between five
+  // named steps alternating left and right down the page, and the
+  // Barcelona days, which use the same pieces at a tighter setting with
+  // no photographs. Both arrangements live here rather than in
+  // content/*.json, because they are layout and would otherwise have to
+  // be kept identical in three languages by hand.
   //
-  // It degrades on its own. An entry whose step or photo is missing from
-  // this guest's bundle is skipped, and any step the table doesn't place
-  // is appended alternating, so adding a sixth step to the copy makes the
-  // page longer rather than making it wrong.
-  var CPH_FLOW = [
-    { kind: "step",  step: 0, side: "left" },
-    { kind: "link",  shape: "a" },
-    { kind: "photo", photo: "denmarkCar", side: "left", id: "denmark-photo" },
-    { kind: "step",  step: 1, side: "right" },
-    { kind: "link",  shape: "b" },
-    { kind: "step",  step: 2, side: "right" },
-    { kind: "link",  shape: "c" },
-    { kind: "step",  step: 3, side: "left" },
-    { kind: "photo", photo: "denmarkTable", side: "right", id: "denmark-photo-2" },
-    { kind: "step",  step: 4, side: "left" },
-  ];
+  // Each degrades on its own. An entry whose step or photo is missing
+  // from this guest's bundle is skipped, and any step a table doesn't
+  // place is appended alternating, so adding a sixth step to the copy
+  // makes the page longer rather than making it wrong.
+  var FLOWS = {
+    denmark: [
+      { kind: "step",  step: 0, side: "left" },
+      { kind: "link",  shape: "a" },
+      { kind: "photo", photo: "denmarkCar", side: "left", id: "denmark-photo" },
+      { kind: "step",  step: 1, side: "right" },
+      { kind: "link",  shape: "b" },
+      { kind: "step",  step: 2, side: "right" },
+      { kind: "link",  shape: "c" },
+      { kind: "step",  step: 3, side: "left" },
+      { kind: "photo", photo: "denmarkTable", side: "right", id: "denmark-photo-2" },
+      { kind: "step",  step: 4, side: "left" },
+    ],
+    // Five days, two abreast, one connector, no photographs. The stroke
+    // goes between the two rows rather than beside a step: here it is the
+    // seam through the block, not a link from one step down to the next.
+    // The fifth day has nobody to sit beside, so it goes under both
+    // columns rather than alone in the left one.
+    plan: [
+      { kind: "step", step: 0, side: "left"   },
+      { kind: "step", step: 1, side: "right"  },
+      { kind: "link", shape: "c" },
+      { kind: "step", step: 2, side: "left"   },
+      { kind: "step", step: 3, side: "right"  },
+      { kind: "step", step: 4, side: "center" },
+    ],
+  };
 
   // The connectors. Each is one unbroken pen stroke with a loop in it, and
   // no two repeat, which is what makes them read as drawn rather than
@@ -288,7 +317,11 @@ window.WeddingRender = (function () {
   // stylesheet, so the wide loop the zig-zag uses and the tall one the
   // single column needs have to be separate elements, shown by the
   // breakpoint.
-  var CPH_PATHS = {
+  //
+  // The plan reuses c. A guest invited to both parts therefore meets that
+  // stroke twice, four sections apart, so .flow-tight mirrors it in the
+  // stylesheet: the same hand rather than the same drawing.
+  var LINK_PATHS = {
     // Falls out of the first step, ties a knot, runs away to the right.
     a: {
       wide: { box: "0 0 120 64", d: "M6 4C20 16 6 27 14 39c6 9 19 10 21 2 1-6-7-8-8-1-1 9 11 18 25 17 22-2 40-10 62-5" },
@@ -306,24 +339,34 @@ window.WeddingRender = (function () {
     },
   };
 
-  function cphStep(step, side, i, ctx) {
+  function flowStep(step, side, i, ctx) {
     var li = document.createElement("li");
-    li.className = "cph-step side-" + side;
+    li.className = "flow-step side-" + side;
     li.style.setProperty("--i", i);
+    // Copenhagen's steps carry no label; the Barcelona days all do ("Day
+    // 1"). The element only exists when there is something to put in it:
+    // an empty <p> still takes a line box, and would open a gap above
+    // every Copenhagen title.
+    if (step.label) {
+      var label = document.createElement("p");
+      label.className = "flow-label";
+      label.textContent = t(step.label, ctx);
+      li.appendChild(label);
+    }
     var h = document.createElement("h3");
-    h.className = "cph-title";
+    h.className = "flow-title";
     h.textContent = t(step.title, ctx);
     var body = document.createElement("p");
-    body.className = "cph-body";
+    body.className = "flow-body";
     body.textContent = t(step.body, ctx);
     li.appendChild(h);
     li.appendChild(body);
     return li;
   }
 
-  function cphPhoto(url, side, id, i) {
+  function flowPhoto(url, side, id, i) {
     var li = document.createElement("li");
-    li.className = "cph-photo side-" + side;
+    li.className = "flow-photo side-" + side;
     li.id = id;
     li.setAttribute("aria-hidden", "true");
     li.style.setProperty("--i", i);
@@ -347,74 +390,122 @@ window.WeddingRender = (function () {
   // on the hidden variant too, since getTotalLength() reads the `d`
   // attribute rather than the layout.
   function measureLinks(root) {
-    root.querySelectorAll(".cph-link path").forEach(function (path) {
+    root.querySelectorAll(".flow-link path").forEach(function (path) {
       path.style.setProperty("--len", path.getTotalLength());
     });
   }
 
-  function cphLink(shape, i) {
+  function flowLink(shape, i) {
     var li = document.createElement("li");
-    li.className = "cph-link shape-" + shape;
+    li.className = "flow-link shape-" + shape;
     li.setAttribute("aria-hidden", "true");
     li.style.setProperty("--i", i);
-    li.innerHTML = svgLink("link-wide", CPH_PATHS[shape].wide) +
-                   svgLink("link-tall", CPH_PATHS[shape].tall);
+    li.innerHTML = svgLink("link-wide", LINK_PATHS[shape].wide) +
+                   svgLink("link-tall", LINK_PATHS[shape].tall);
     return li;
   }
 
-  function renderDenmark(ctx, c) {
-    if (!c.denmark) return;
-    var ol = document.getElementById("denmark-flow");
+  function renderFlow(ol, steps, layout, ctx) {
     if (!ol) return;
-    var steps = c.denmark.steps || [];
     var photos = (bundle.details && bundle.details.photos) || {};
     var placed = {};
     var i = 0;
     ol.innerHTML = "";
 
-    CPH_FLOW.forEach(function (entry) {
+    layout.forEach(function (entry) {
       if (entry.kind === "step") {
         if (!steps[entry.step]) return;
         placed[entry.step] = true;
-        ol.appendChild(cphStep(steps[entry.step], entry.side, i++, ctx));
+        ol.appendChild(flowStep(steps[entry.step], entry.side, i++, ctx));
       } else if (entry.kind === "photo") {
         if (!photos[entry.photo]) return;
-        ol.appendChild(cphPhoto(photos[entry.photo], entry.side, entry.id, i++));
+        ol.appendChild(flowPhoto(photos[entry.photo], entry.side, entry.id, i++));
       } else {
-        ol.appendChild(cphLink(entry.shape, i++));
+        ol.appendChild(flowLink(entry.shape, i++));
       }
     });
 
     steps.forEach(function (step, n) {
       if (placed[n]) return;
-      ol.appendChild(cphStep(step, n % 2 ? "right" : "left", i++, ctx));
+      ol.appendChild(flowStep(step, n % 2 ? "right" : "left", i++, ctx));
     });
 
     measureLinks(ol);
   }
 
+  function renderDenmark(ctx, c) {
+    if (!c.denmark) return;
+    renderFlow(document.getElementById("denmark-flow"), c.denmark.steps || [], FLOWS.denmark, ctx);
+  }
+
+  // Background images rather than <img>, like every other photograph on
+  // the site: the paths are facts, they arrive from the bundle, and
+  // nothing photographic is ever named in index.html. These carry no
+  // information a caption could give and are framed by cover, exactly as
+  // Copenhagen's insets are, so an <img> would buy an alt="" and a second
+  // way of cropping and nothing else.
+  function renderCarousel(ul, urls) {
+    if (!ul) return;
+    // Photographs are facts, not copy, so a language switch changes
+    // nothing here. Rebuilding anyway would throw away the guest's place
+    // in the strip and leave js/main.js observing slides that are no
+    // longer in the document, so the dots would quietly stop tracking.
+    var key = urls.join("|");
+    if (ul.dataset.urls === key) return;
+    ul.dataset.urls = key;
+    ul.innerHTML = "";
+    urls.forEach(function (url, i) {
+      var li = document.createElement("li");
+      li.style.setProperty("--i", i);
+      li.style.backgroundImage = "url('" + url + "')";
+      ul.appendChild(li);
+    });
+    // An empty scroller is still a focus stop and still announces its
+    // label. Take it out of the page rather than leave a labelled void.
+    ul.hidden = urls.length === 0;
+  }
+
   function renderPlace(ctx, c) {
     if (!c.place) return;
     var d = bundle.details;
-    setText(document.getElementById("place-name"), d.airbnb.name || c.place.nameTBD);
-    setText(document.getElementById("place-address"), d.airbnb.address || c.place.addressTBD);
 
-    var list = document.getElementById("place-amenities");
-    list.innerHTML = "";
-    (c.place.amenities || []).forEach(function (a, i) {
-      var li = document.createElement("li");
-      li.style.setProperty("--i", i);
-      li.textContent = a;
-      list.appendChild(li);
+    // Two lines, because the design sets it on two. Splitting one string
+    // on its commas would be guesswork, so details.json holds the lines.
+    var addr = document.getElementById("place-address");
+    var lines = (d.airbnb.addressLines || []).filter(Boolean);
+    if (!lines.length) lines = [c.place.addressTBD];
+    addr.innerHTML = "";
+    lines.forEach(function (line) {
+      var span = document.createElement("span");
+      span.textContent = line;
+      addr.appendChild(span);
     });
 
-    document.getElementById("place-listing").href = d.airbnb.listingUrl;
-    document.getElementById("place-map").href = d.airbnb.mapUrl;
+    // The map is a link with a picture in it rather than a framed
+    // background like the rest: it is the one image here that is also a
+    // control. Its src comes from the bundle and never from the markup,
+    // so a guest without a Barcelona invitation never requests it.
+    var mapLink = document.getElementById("place-map");
+    var mapSrc = (d.photos && d.photos.map) || "";
+    if (mapSrc && d.airbnb.mapUrl) {
+      mapLink.href = d.airbnb.mapUrl;
+      // Assigning the same string on a language switch does not re-request.
+      document.getElementById("place-map-img").src = mapSrc;
+      mapLink.hidden = false;
+    } else {
+      mapLink.hidden = true;
+    }
+
+    renderCarousel(document.getElementById("place-photos"), (d.photos && d.photos.house) || []);
+
+    var listing = document.getElementById("place-listing");
+    if (d.airbnb.listingUrl) listing.href = d.airbnb.listingUrl;
+    else listing.hidden = true;
   }
 
   function renderPlan(ctx, c) {
     if (!c.plan) return;
-    renderTimeline(document.getElementById("plan-timeline"), c.plan.days, ctx);
+    renderFlow(document.getElementById("plan-flow"), c.plan.days || [], FLOWS.plan, ctx);
   }
 
   function renderPractical(ctx, c) {
@@ -461,25 +552,6 @@ window.WeddingRender = (function () {
       list.appendChild(wrap);
     });
     if (window.WeddingMain) window.WeddingMain.bindFaq();
-  }
-
-  function setPhoto(el, url) {
-    if (!el) return;
-    if (url) {
-      el.style.backgroundImage = "url('" + url + "')";
-      el.hidden = false;
-    } else {
-      el.hidden = true;
-    }
-  }
-
-  function applyPhotos() {
-    var photos = (bundle.details && bundle.details.photos) || {};
-    setPhoto(document.getElementById("place-photo"), photos.place);
-    // Copenhagen's two insets are part of its composed flow and are set by
-    // renderDenmark. This runs from init(), before the first setLanguage(),
-    // so those elements do not exist yet: looking them up here would find
-    // nothing and silently leave the section without its photographs.
   }
 
   // Removes (not just hides) every section whose content didn't survive the
@@ -533,7 +605,6 @@ window.WeddingRender = (function () {
   function init(b) {
     bundle = b;
     applyEventScope();
-    applyPhotos();
     var startLang = (window.WeddingI18n && window.WeddingI18n.preferredLang(bundle.guest.lang)) || bundle.guest.lang || "en";
     setLanguage(startLang);
 

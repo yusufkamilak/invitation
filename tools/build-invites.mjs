@@ -107,7 +107,7 @@ const CONTENT_PRUNE = {
 // keys removed from content/details.json the same way.
 const DETAILS_PRUNE = {
   s: ["denmark", "photos.denmarkCar", "photos.denmarkTable"],
-  d: ["spain", "airbnb", "paypal", "photos.place"],
+  d: ["spain", "airbnb", "paypal", "photos.map", "photos.house"],
   b: [],
 };
 
@@ -116,8 +116,10 @@ const DETAILS_PRUNE = {
 // encrypted.
 // A photo path is a fact like any other: assets/ is browsable on the public
 // repo, so a path left in the wrong bundle tells that guest exactly which
-// file to go and look at. Listing them here is what stops DETAILS_PRUNE
-// above from quietly rotting the next time a photo slot is added.
+// file to go and look at. The map is the sharpest case of that, since a map
+// with a pin on it does not need a caption to say where the house is.
+// Listing them here is what stops DETAILS_PRUNE above from quietly rotting
+// the next time a photo slot is added.
 const LEAK_CHECK = {
   s: (details) => [
     details.denmark?.city,
@@ -126,11 +128,22 @@ const LEAK_CHECK = {
   ].filter(Boolean),
   d: (details) => [
     details.spain?.city,
+    ...(details.airbnb?.addressLines || []),
     details.airbnb?.listingUrl,
+    details.airbnb?.mapUrl,
     details.paypal?.link,
-    details.photos?.place,
+    details.photos?.map,
+    // The house photos are a list, so spread it: a fifth one added to
+    // details.json is checked without anyone remembering to come here.
+    ...(details.photos?.house || []),
     details.spain?.costPerPerson != null ? String(details.spain.costPerPerson) : null,
   ].filter(Boolean),
+  // Deliberately not in that list: spain.airportMinutes. It is the number
+  // 30, and a two-digit needle matched against the whole plaintext bundle
+  // would hit a date, a QR path or a word count and fail the build for a
+  // guest who was never in any danger. The whole spain block is deleted
+  // for "d" anyway; the needles here are the strings distinctive enough
+  // to be evidence.
   b: () => [],
 };
 

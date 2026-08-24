@@ -113,6 +113,66 @@ window.WeddingMain = (function () {
   }
 
   // ---------------------------------------------------------------
+  // The house carousel — the dots under it, and nothing else.
+  //
+  // The scrolling, the snapping and the momentum are all CSS; see the
+  // carousel block in css/style.css. This is only the read-out: which
+  // photograph you are on, and a way to jump to another one. Without it
+  // the peek at the edge is the sole affordance, which is enough on a
+  // phone and easy to miss with a trackpad.
+  //
+  // The observer's root is the strip itself, so "which slide is showing"
+  // is a question about the strip and not about the page, and the answer
+  // stays right through a resize, a language switch or a rotate without
+  // anything having to be recomputed.
+  // ---------------------------------------------------------------
+  function initCarousel() {
+    var track = document.getElementById("place-photos");
+    var dots = document.getElementById("place-dots");
+    if (!track || !dots) return;
+    var slides = [].slice.call(track.children);
+    // One photograph is not a carousel, and a row of one dot is furniture.
+    if (slides.length < 2) return;
+
+    var buttons = slides.map(function (slide, i) {
+      var b = document.createElement("button");
+      b.type = "button";
+      // Out of the tab order, which is what lets the container carry
+      // aria-hidden honestly: a focusable child inside an aria-hidden
+      // subtree is a trap. The strip itself is the labelled, keyboard
+      // scrollable control; these are a pointer convenience on top of it.
+      b.tabIndex = -1;
+      b.style.setProperty("--i", i);
+      b.onclick = function () {
+        slide.scrollIntoView({
+          behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+          block: "nearest",
+          inline: "start",
+        });
+      };
+      dots.appendChild(b);
+      return b;
+    });
+
+    function mark(i) {
+      buttons.forEach(function (b, n) {
+        if (n === i) b.setAttribute("aria-current", "true");
+        else b.removeAttribute("aria-current");
+      });
+    }
+    mark(0);
+    dots.hidden = false;
+
+    if (!("IntersectionObserver" in window)) return;
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) mark(slides.indexOf(entry.target));
+      });
+    }, { root: track, threshold: 0.6 });
+    slides.forEach(function (s) { io.observe(s); });
+  }
+
+  // ---------------------------------------------------------------
   // Countdown — to the Denmark date for a Denmark-only guest, to Spain
   // arrival otherwise. Hidden entirely when there's no date to count to
   // yet (Denmark's date is still TBC), and counts up from 0 the first
@@ -301,6 +361,7 @@ window.WeddingMain = (function () {
     initCardEntrance();
     initSurfaceWatch();
     initReveal();
+    initCarousel();
     initCountdown();
     bindFaq();
     bindRsvpForm();

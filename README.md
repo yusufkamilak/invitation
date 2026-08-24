@@ -40,7 +40,7 @@ Every guest sees the card, the RSVP section and the FAQ. What differs:
 | event | extra sections shown | content NOT present in the decrypted bundle |
 |---|---|---|
 | `s` Spain only | `place`, `plan`, `practical` | `denmark`; `details.denmark` |
-| `d` Denmark only | `denmark` | `place`, `plan`, `practical`; `details.spain`, `details.airbnb`, `details.paypal` |
+| `d` Denmark only | `denmark` | `place`, `plan`, `practical`; `details.spain`, `details.airbnb`, `details.paypal`, `details.photos.map`, `details.photos.house` |
 | `b` both | all four | nothing, a both-guest's bundle is unpruned |
 
 The letter on the first screen is the one thing every guest gets
@@ -60,10 +60,18 @@ in `index.html`. Forget the prune entry and content leaks; forget
 
 Caveat: the repo itself is public, so everything under `assets/` is
 browsable on GitHub regardless of event. The `fl-*.webp` florals on the
-letter are generic watercolours and say nothing about anyone, but the two
-`ph-*.jpg` photos are real. Pruning hides which guest's page
-*references* which photo — it can't hide that the files exist. Don't put
-anything identifying (e.g. a recognisable venue) in a gated photo slot.
+letter are generic watercolours and say nothing about anyone, but the
+`ph-*` photos are real. Pruning hides which guest's page *references*
+which photo — it can't hide that the files exist. Don't put anything
+identifying (e.g. a recognisable venue) in a gated photo slot.
+
+`assets/ph-map.webp` is a considered exception to that last sentence, not
+an oversight. A map with a pin on it *is* the location, so it is the one
+gated asset that gives away a fact rather than a mood. It was accepted
+because the pin sits at the scale of "a hillside near Vallirana" rather
+than a street, the street address itself stays inside the encrypted
+bundle, and the filename says nothing. If it is ever re-cut at street
+scale, that trade is no longer the same one.
 
 **What this means day to day:**
 - To add, edit, or remove a guest: edit `tools/guests.csv`, then rebuild.
@@ -121,13 +129,21 @@ Anna,de,b,,
 
 ## Photos
 
-Three slots, all real photos. To swap one, keep the same filename (or
-update the path in `content/details.json`'s `photos` block) and re-run
+Six images, all real. To swap one, keep the same filename (or update the
+path in `content/details.json`'s `photos` block) and re-run
 `node tools/build-invites.mjs`:
 
-- `ph-house.jpg` — `photos.place`, the inset in the Spain section (Spain
-  guests only). Shown 16:10 inside a hairline, so a subject near the top
-  or bottom edge will get cropped.
+- `ph-house-1..4.jpg` — `photos.house`, an **array**, the horizontal
+  scroller in the Barcelona section (Spain guests only). Shown 3:2 inside
+  a hairline, so 3:2 sources need no thought and anything else is cropped
+  to the centre. The first is the one everybody sees without swiping;
+  make it the establishing shot. Add or remove entries freely: the
+  scroller, its dots and the leak assertion all read the array's length.
+- `ph-map.webp` — `photos.map`, the map above the address (Spain guests
+  only). It is a link as well as a picture, so it also needs
+  `airbnb.mapUrl` set or it hides itself. WebP rather than JPEG because
+  it is fine grey type over flat ground, which JPEG rings around; see the
+  caveat in "Event scoping" for the privacy trade it carries.
 - `ph-cph-car.jpg` — `photos.denmarkCar`, the first inset in the
   Copenhagen section, beside "Reception" (Denmark guests only). 5:4 on a
   wide screen, 4:3 on a phone.
@@ -137,11 +153,13 @@ update the path in `content/details.json`'s `photos` block) and re-run
 
 Adding a photo slot means four edits, not one: the path in
 `details.json`, the key in `DETAILS_PRUNE` **and** in `LEAK_CHECK` in
-`tools/build-invites.mjs`, and the entry in `CPH_FLOW` in `js/render.js`
-if it belongs to the Copenhagen section. Miss the prune and the path
-ships inside the bundles of guests who were never invited to that part;
-`assets/` is browsable on the public repo, so the path is the whole leak.
-`LEAK_CHECK` is what turns that from a convention into a build failure.
+`tools/build-invites.mjs`, and the entry in `FLOWS` in `js/render.js` if
+it belongs to a composed section. (A fifth house photo needs none of
+those beyond `details.json`: `photos.house` is pruned and leak-checked as
+a whole array.) Miss the prune and the path ships inside the bundles of
+guests who were never invited to that part; `assets/` is browsable on the
+public repo, so the path is the whole leak. `LEAK_CHECK` is what turns
+that from a convention into a build failure.
 
 There is deliberately no photo on the card itself: it is type only.
 
@@ -150,8 +168,22 @@ Size them before committing. 1400px wide at quality 60 is about 250 to
 ~552 CSS px:
 
 ```
-sips -s format jpeg -s formatOptions 60 --resampleWidth 1400 in.jpg --out assets/ph-house.jpg
+sips -s format jpeg -s formatOptions 60 --resampleWidth 1400 in.jpg --out assets/ph-cph-car.jpg
 ```
+
+The four house photos are 1100px at quality 62 rather than 1400 at 60,
+because all four now load in one section: a scroller slide never renders
+wider than `min(82%, 22rem)` = 352 CSS px, so 1100 is still over 3x.
+`sips` cannot write WebP on macOS (it reads it and will not export it),
+so the map went through Homebrew's `cwebp` instead:
+
+```
+cwebp -q 82 -m 6 -sharp_yuv map.png -o assets/ph-map.webp
+```
+
+Do not `--resampleWidth` the map at all. It is 832px against a frame that
+maxes at 552 CSS px, which is 1.5x: fine on a phone, slightly soft on a
+Retina Mac. Re-capture the Google Maps view at 2x if that ever matters.
 
 Never `--resampleWidth` *up*. The two Copenhagen photos were cut from a
 design mock rather than from originals and are only 537px and 497px wide;
@@ -170,7 +202,11 @@ thing that only shows up once links are already out:
 
 - **No em dashes or en dashes** anywhere in `content/*.json`. Use a comma,
   a colon, or a full stop. Check with
-  `grep -n '[—–]' content/*.json` before building.
+  `grep -n '[—–]' content/*.json` before building. That grep is the whole
+  of the rule only because the one string assembled at runtime, the
+  Barcelona date range, strips its own: `Intl` joins a range with an en
+  dash (and pads it with thin spaces in Turkish), so `fmtDateRange()` in
+  `js/render.js` normalises both on the way out.
 - **No wedding vocabulary** *outside `denmark.steps`*. This is a dinner
   and a getaway, not a wedding; that covers `Hochzeit`/`Trauung` and
   `düğün`/`nikah` too. The five Copenhagen steps are a deliberate,

@@ -9,7 +9,7 @@
 <title>An Invitation</title>
 <meta name="description" content="A private invitation.">
 <link rel="stylesheet" href="css/fonts-embedded.css?v=a9246bfa">
-<link rel="stylesheet" href="css/style.css?v=77207d27">
+<link rel="stylesheet" href="css/style.css?v=17e4b199">
 <link rel="icon" href="data:,">
 </head>
 <body>
@@ -130,34 +130,70 @@
 
       <!-- The one composed section on the site. Its steps, the two photo
            insets between them and the drawn connectors that link them are
-           all built by renderDenmark() in js/render.js from a layout table
-           that lives there: the arrangement is design, not copy, so it is
-           not repeated three times in content/*.json. -->
-      <section id="denmark" class="section cph" hidden>
+           all built by renderFlow() in js/render.js from a layout table
+           that lives there (FLOWS.denmark): the arrangement is design,
+           not copy, so it is not repeated three times in content/*.json.
+           The Barcelona days below use the same builder. -->
+      <section id="denmark" class="section flow-wide" hidden>
         <p class="kicker" data-bind="denmark.kicker"></p>
         <h2 class="section-title" data-bind="denmark.title"></h2>
-        <ol class="cph-flow" id="denmark-flow"><!-- populated by render.js --></ol>
+        <ol class="flow" id="denmark-flow"><!-- populated by render.js --></ol>
         <p class="section-note" data-bind="denmark.travelNote"></p>
       </section>
 
+      <!-- Barcelona. A centred opening (where, when, how far from the
+           airport, a map that is also the link to it, the address), then
+           the house: the copy, and four photographs in a scroller.
+
+           Every path here is set by render.js from the guest's bundle,
+           the map's src included, and none of them is written in this
+           file. A guest whose #place applyEventScope() removed therefore
+           never requests any of the files, which is the point: assets/
+           is browsable on the public repo, so a request is a tell. -->
       <section id="place" class="section" hidden>
-        <p class="kicker" data-bind="place.kicker"></p>
-        <h2 class="section-title" id="place-name"></h2>
-        <p class="section-sub" id="place-address"></p>
-        <div class="photo-frame" id="place-photo" aria-hidden="true"></div>
+        <div class="place-hero">
+          <p class="kicker" data-bind="place.kicker"></p>
+          <h2 class="place-title" data-bind="place.title"></h2>
+          <p class="place-line" data-bind="place.dateLine"></p>
+          <p class="place-line" data-bind="place.travelLine"></p>
+
+          <!-- No src and no width/height on purpose: the src is a fact and
+               comes from the bundle (see renderPlace), the box comes from
+               .map-link's aspect-ratio. The <a> carries the accessible
+               name, so the <img> inside it stays alt="". -->
+          <a class="map-link" id="place-map" href="#" target="_blank" rel="noopener"
+             data-bind-attr-aria-label="place.mapLabel">
+            <img id="place-map-img" alt="" decoding="async">
+          </a>
+
+          <p class="place-address" id="place-address"><!-- populated by render.js --></p>
+        </div>
+
         <p class="section-body" data-bind="place.body"></p>
-        <ul class="tag-list" id="place-amenities"><!-- populated by render.js --></ul>
+
+        <ul class="carousel" id="place-photos" role="group" tabindex="0"
+            data-bind-attr-aria-label="place.photosLabel"><!-- populated by render.js --></ul>
+        <!-- Starts hidden, and js/main.js only unhides it once there is
+             more than one photograph to point at. A row of one dot is
+             furniture, and a guest with no photographs at all should not
+             be told there is something to swipe. -->
+        <div class="carousel-dots" id="place-dots" aria-hidden="true" hidden><!-- populated by main.js --></div>
+
         <div class="button-row">
           <a class="btn btn-line" id="place-listing" href="#" target="_blank" rel="noopener" data-bind-text="place.listingLabel"></a>
-          <a class="btn btn-line" id="place-map" href="#" target="_blank" rel="noopener" data-bind-text="place.mapLabel"></a>
         </div>
         <p class="section-note" data-bind="place.note"></p>
       </section>
 
-      <section id="plan" class="section" hidden>
+      <!-- The days. The same composed flow as Copenhagen at its compact
+           setting: no photographs, one connector instead of three, two
+           columns that sit abreast rather than overlapping, and smaller
+           type. The arrangement is FLOWS.plan in js/render.js. -->
+      <section id="plan" class="section flow-mid" hidden>
         <p class="kicker" data-bind="plan.kicker"></p>
         <h2 class="section-title" data-bind="plan.subtitle"></h2>
-        <ol class="timeline" id="plan-timeline"><!-- populated by render.js --></ol>
+        <p class="section-body plan-lead" data-bind="plan.lead"></p>
+        <ol class="flow flow-tight" id="plan-flow"><!-- populated by render.js --></ol>
       </section>
 
       <section id="practical" class="section" hidden>
@@ -249,12 +285,12 @@
   </div>
 
   <script src="js/config.js?v=35b0850f" defer></script>
-  <script src="js/render.js?v=715fe16a" defer></script>
+  <script src="js/render.js?v=39c47d3a" defer></script>
   <script src="js/i18n.js?v=be49d91f" defer></script>
   <script src="js/envelope.js?v=e0fccd62" defer></script>
   <script src="js/letter.js?v=9829543e" defer></script>
   <script src="js/paging.js?v=846bc5ab" defer></script>
-  <script src="js/main.js?v=158cdeae" defer></script>
+  <script src="js/main.js?v=58ee1871" defer></script>
   <script src="js/unlock.js?v=4085fe4a" defer></script>
 </body>
 </html>

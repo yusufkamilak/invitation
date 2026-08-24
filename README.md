@@ -71,6 +71,22 @@ second part. Keep it that way. If a third part is ever added, give it a
 in `content/*.json` needs to change, because the pills are labelled with
 the city and the city already comes from the bundle.
 
+The countdown is part of the same idea. `renderCardMeta()` moves the live
+`#countdown` element out of `.card-foot` and into the column of the date it
+is counting to, which is the soonest one the guest actually has
+(`nextPart()`, shared with `initCountdown()` in `js/main.js` so the number
+and the column can never disagree). Its position is what answers "374 days
+until what", and that is why it has no label naming the place: a label
+would have to be a sentence in three languages, and Turkish wants the place
+before the number with a case ending that harmonises to the city's own last
+vowel. Two things follow for anyone editing `renderCardMeta()`. The element
+is live, so it is parked back in `.card-foot` before `innerHTML` is cleared
+and re-adopted afterwards; drop that and the first language switch destroys
+the node `main.js` is still ticking on an hourly timer, and the countdown
+disappears. And fill in `denmark.date`: until it is set there is only one
+dated part, so the ordering is doing nothing visible and a regression there
+would not show.
+
 Caveat: the repo itself is public, so everything under `assets/` is
 browsable on GitHub regardless of event. The `fl-*.webp` florals on the
 letter are generic watercolours and say nothing about anyone, but the

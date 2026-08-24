@@ -927,7 +927,15 @@ main { overflow-x: hidden; }
   padding: 0.6rem 1.25rem;
   letter-spacing: 0.14em;
 }
-.card-meta.is-paired .meta-row:last-of-type { margin-bottom: var(--space-3); }
+/* Whatever follows the dates inside a column, the countdown or the jump
+   pill or both, stands off them by the same amount. :not(:last-child) is
+   what keeps that margin from hanging under a column that ends on its
+   dates, which is every column a one-part guest has. The same reasoning
+   holds the countdown off the pill below it in the taller column, where
+   the pill's own margin-top: auto has no slack left to open a gap with. */
+.card-meta-item :is(.meta-row:last-of-type, .countdown):not(:last-child) {
+  margin-bottom: var(--space-3);
+}
 
 .card-foot {
   margin-top: var(--space-4);

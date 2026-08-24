@@ -227,12 +227,40 @@ window.WeddingRender = (function () {
   // Roman also needs no translating.
   var ORDINALS = ["I", "II", "III"];
 
+  // The part the countdown belongs to: the soonest date this guest
+  // actually has, or null if they have none yet. js/main.js counts to the
+  // same answer, so the number and the column it sits in cannot disagree
+  // about which date they mean.
+  function nextPart() {
+    var d = bundle.details;
+    var dated = [];
+    if (d.denmark && d.denmark.date) dated.push({ iso: d.denmark.date, section: "denmark" });
+    if (d.spain && d.spain.checkin) dated.push({ iso: d.spain.checkin, section: "place" });
+    // ISO dates, so a string sort is a date sort.
+    dated.sort(function (a, b) { return a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0; });
+    return dated[0] || null;
+  }
+
   // The at-a-glance block under the greeting: one column per place the
   // guest is actually invited to, so a Denmark-only guest sees one column
   // and a both-parts guest sees two.
   function renderCardMeta(ctx, c) {
     var wrap = document.getElementById("card-meta");
     var d = bundle.details;
+
+    // Park the countdown back in .card-foot before the rebuild. It is a
+    // live element: js/main.js holds a reference to it and to the number
+    // inside it, and ticks both on an hourly timer. Leaving it in the
+    // block while innerHTML clears it would destroy that element on the
+    // first language switch and leave the timer writing into a node no
+    // longer in the document, so the countdown would simply vanish.
+    var countdown = document.getElementById("countdown");
+    var foot = document.querySelector(".card-foot");
+    if (countdown && foot && countdown.parentNode !== foot) {
+      foot.insertBefore(countdown, foot.firstChild);
+    }
+    var next = nextPart();
+
     wrap.innerHTML = "";
 
     // `section` is the id this part's own section carries in index.html,
@@ -307,6 +335,15 @@ window.WeddingRender = (function () {
         line.appendChild(v);
         item.appendChild(line);
       });
+      // The countdown goes in the column of the date it counts to, above
+      // that column's pill. Position is the whole of the answer to "374
+      // days until what", and it is the only answer that needs no wording:
+      // a line naming the place would have to be a sentence in three
+      // languages, and Turkish wants the place before the number with a
+      // case ending that harmonises to the city's own last vowel.
+      if (countdown && next && p.section === next.section) {
+        item.appendChild(countdown);
+      }
       // Inside the column, not in a row of their own underneath it. On a
       // phone the two columns stack, and a shared row would put the
       // Copenhagen pill below the whole Barcelona column, a screen away
@@ -688,7 +725,12 @@ window.WeddingRender = (function () {
     });
   }
 
-  return { init: init, setLanguage: setLanguage, getLang: function () { return currentLang; } };
+  return {
+    init: init,
+    setLanguage: setLanguage,
+    nextPart: nextPart,
+    getLang: function () { return currentLang; },
+  };
 })();
 
 window.addEventListener("bundle:ready", function (e) {

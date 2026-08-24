@@ -173,21 +173,31 @@ window.WeddingMain = (function () {
   }
 
   // ---------------------------------------------------------------
-  // Countdown — to the Denmark date for a Denmark-only guest, to Spain
-  // arrival otherwise. Hidden entirely when there's no date to count to
-  // yet (Denmark's date is still TBC), and counts up from 0 the first
-  // time it scrolls into view rather than snapping to the value.
+  // Countdown — to the soonest date this guest actually has. Hidden
+  // entirely when they have none yet (Denmark's date is still TBC), and
+  // counts up from 0 the first time it scrolls into view rather than
+  // snapping to the value.
+  //
+  // It used to take Spain's arrival whenever Spain was in the bundle,
+  // which is only right while Denmark has no date. Fill that date in and a
+  // both-parts guest would have been counting to the second of their two
+  // dates while the first one came and went.
+  //
+  // Which part that is comes from WeddingRender.nextPart(), not from a
+  // second copy of the rule here: render.js moves this element into that
+  // part's own column, and a number sitting in one column while counting
+  // to the other is the exact confusion the move was meant to end.
   // ---------------------------------------------------------------
   var countdownTimer = null;
   function initCountdown() {
-    var d = bundle.details;
-    var iso = d.spain ? d.spain.checkin : (d.denmark && d.denmark.date);
     var el = document.getElementById("countdown");
-    if (!iso) {
+    var next = window.WeddingRender && window.WeddingRender.nextPart();
+    if (!next) {
       el.hidden = true;
       return;
     }
-    var target = new Date(iso + "T00:00:00");
+
+    var target = new Date(next.iso + "T00:00:00");
     var numEl = document.getElementById("cd-days");
 
     function daysLeft() {

@@ -9,7 +9,7 @@
 <title>An Invitation</title>
 <meta name="description" content="A private invitation.">
 <link rel="stylesheet" href="css/fonts-embedded.css?v=a9246bfa">
-<link rel="stylesheet" href="css/style.css?v=8908246d">
+<link rel="stylesheet" href="css/style.css?v=6943f5e1">
 <link rel="icon" href="data:,">
 </head>
 <body>
@@ -119,6 +119,12 @@
           <div class="card-meta" id="card-meta"><!-- populated by render.js --></div>
 
           <div class="card-foot">
+            <!-- This is the countdown's home, not where it ends up.
+                 renderCardMeta() in js/render.js moves it into the column
+                 of the part it counts to, so its position says which of
+                 the dates above it means and no wording has to. It stays
+                 here only for a guest who has no date yet, where it is
+                 hidden anyway. -->
             <div class="countdown" id="countdown" aria-live="off" hidden>
               <span class="countdown-num" id="cd-days">&nbsp;</span>
               <span class="countdown-label" data-bind="card.countdownLabel"></span>
@@ -285,12 +291,12 @@
   </div>
 
   <script src="js/config.js?v=35b0850f" defer></script>
-  <script src="js/render.js?v=797d6dfb" defer></script>
+  <script src="js/render.js?v=04c41c9c" defer></script>
   <script src="js/i18n.js?v=be49d91f" defer></script>
   <script src="js/envelope.js?v=e0fccd62" defer></script>
   <script src="js/letter.js?v=9829543e" defer></script>
   <script src="js/paging.js?v=846bc5ab" defer></script>
-  <script src="js/main.js?v=58ee1871" defer></script>
+  <script src="js/main.js?v=0d73c6c2" defer></script>
   <script src="js/unlock.js?v=4085fe4a" defer></script>
 </body>
 </html>

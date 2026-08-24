@@ -120,14 +120,24 @@ const DETAILS_PRUNE = {
 // with a pin on it does not need a caption to say where the house is.
 // Listing them here is what stops DETAILS_PRUNE above from quietly rotting
 // the next time a photo slot is added.
+//
+// The tr/de copy hardcodes localized city spellings, because the shared
+// {{...City}} tokens can only carry one spelling. Those exonyms are facts
+// like any other, so they are needles too.
+const CITY_ALIASES = {
+  Copenhagen: ["Kopenhag", "Kopenhagen"],
+  Barcelona: ["Barselona"],
+};
 const LEAK_CHECK = {
   s: (details) => [
     details.denmark?.city,
+    ...(CITY_ALIASES[details.denmark?.city] || []),
     details.photos?.denmarkCar,
     details.photos?.denmarkTable,
   ].filter(Boolean),
   d: (details) => [
     details.spain?.city,
+    ...(CITY_ALIASES[details.spain?.city] || []),
     ...(details.airbnb?.addressLines || []),
     details.airbnb?.listingUrl,
     details.airbnb?.mapUrl,

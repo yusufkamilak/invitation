@@ -9,7 +9,7 @@
 <title>An Invitation</title>
 <meta name="description" content="A private invitation.">
 <link rel="stylesheet" href="css/fonts-embedded.css?v=a9246bfa">
-<link rel="stylesheet" href="css/style.css?v=6073c030">
+<link rel="stylesheet" href="css/style.css?v=51260b9d">
 <link rel="icon" href="data:,">
 </head>
 <body>
@@ -207,7 +207,9 @@
 
         <div class="panel">
           <p class="cost-amount" id="cost-amount"></p>
+          <p class="cost-pernight" data-bind="practical.perNight"></p>
           <p class="panel-body" data-bind="practical.costBody"></p>
+          <p class="panel-body" data-bind="practical.coverNote"></p>
           <div class="pay-row">
             <a class="btn btn-solid" id="paypal-link" href="#" target="_blank" rel="noopener" data-bind-text="practical.paypalLabel"></a>
             <div class="qr-wrap" id="qr-wrap" aria-hidden="true"></div>
@@ -291,7 +293,7 @@
   </div>
 
   <script src="js/config.js?v=35b0850f" defer></script>
-  <script src="js/render.js?v=daf45510" defer></script>
+  <script src="js/render.js?v=649c8b43" defer></script>
   <script src="js/i18n.js?v=be49d91f" defer></script>
   <script src="js/envelope.js?v=e0fccd62" defer></script>
   <script src="js/letter.js?v=9829543e" defer></script>

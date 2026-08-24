@@ -100,6 +100,7 @@ window.WeddingRender = (function () {
       airportMinutes: hasSpain && d.spain.airportMinutes != null ? d.spain.airportMinutes : "",
       nights: nights != null ? nights : "",
       cost: hasSpain ? fmtCost(d.spain.costPerPerson, d.spain.currency, lang) : "",
+      costPerNight: hasSpain && nights ? fmtCost(Math.round(d.spain.costPerPerson / nights), d.spain.currency, lang) : "",
     };
   }
 

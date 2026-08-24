@@ -692,20 +692,23 @@ main { overflow-x: hidden; }
    that decides it is not prose-versus-heading but one-versus-many. A
    paragraph that stands alone under a centred title has nothing to line up
    with except that title, and left aligning it reads as a slip rather than
-   as a margin. Anything that comes in a set stays left: the flow steps,
-   the check list rows, the FAQ questions, the form fields. A set is read
-   down its left edge, and centring would move the start of every line
-   in it.
+   as a margin. Anything that comes in a set keeps a left edge: the flow
+   steps, the check list rows, the FAQ questions, the form's labels and
+   fields. A set is read down that edge, and centring the rows one by one
+   would move the start of every line in it. So a set is centred as a
+   BLOCK and left aligned inside, which is what .check-list and .form both
+   do below with a width and an auto margin.
 
    Prose set to a measure is still ragged on its right edge by design, and
    centring rags both. That is affordable at the one to three lines these
    paragraphs run to and would not be over a long left aligned run, which
    is why the measures below stay short.
 
-   .sub-title is deliberately not in here. It heads left aligned lists
-   ("Bring", "Or just ask us something") and would float away from them.
-   #place overrides that for its own, which heads a centred carousel. */
-.kicker, .section-title, .section-sub { text-align: center; }
+   .sub-title is in here too. Both of the ones that exist head a block
+   that is itself centred now, "Bring" over the check list and "Or just
+   ask us something" over the question form, so a heading left on the
+   margin would be the only thing in its section off the axis. */
+.kicker, .section-title, .section-sub, .sub-title { text-align: center; }
 .kicker {
   font-family: var(--sans);
   font-size: var(--step--1);
@@ -1138,7 +1141,21 @@ main { overflow-x: hidden; }
 /* ============================================================
    Lists and buttons
    ============================================================ */
-.check-list { margin-top: var(--space-2); display: flex; flex-direction: column; gap: 0.65rem; }
+/* Centred as a block, not row by row. The items run from eight characters
+   to thirty-odd, so centring each one would rag both edges and strand the
+   diamond at the far left of the short ones. fit-content shrinks the box to
+   the longest item and the auto margin puts that box in the middle, which
+   leaves every row starting on a shared left edge with the diamonds in a
+   column. It also caps itself at the available width, so the longest German
+   item still wraps on a phone rather than overflowing. */
+.check-list {
+  margin-top: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  width: fit-content;
+  margin-inline: auto;
+}
 .check-list li { position: relative; padding-left: 1.5rem; color: var(--forest-deep); }
 .check-list li::before {
   content: "";
@@ -1191,7 +1208,23 @@ main { overflow-x: hidden; }
 /* ============================================================
    Forms
    ============================================================ */
-.form { display: flex; flex-direction: column; gap: var(--space-2); max-width: 30rem; margin-top: var(--space-3); }
+/* The same treatment as .check-list: centred as a block, left aligned
+   inside. The measure is what makes it a block worth centring, and without
+   the auto margin the form sat on the section's left edge while the three
+   headings above it centred on the section's middle, so the attending
+   buttons and Send were visibly off the axis everything else on the page
+   shares, by half the difference between 30rem and the section's own
+   width. The labels and the typed text stay
+   left, because a label belongs over the left corner of its own box and
+   centred input is unreadable as you type it. */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: 30rem;
+  margin-top: var(--space-3);
+  margin-inline: auto;
+}
 .field { display: flex; flex-direction: column; gap: 0.4rem; }
 .field label { font-size: var(--step--1); color: var(--forest-deep); }
 .field input, .field textarea {

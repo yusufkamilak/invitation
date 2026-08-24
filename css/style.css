@@ -14,7 +14,7 @@
   --beige-deep: #ddcfb6;  /* envelope inside / folds        */
   --beige-dim:  #c9b795;  /* envelope hairlines             */
   --cream:      #f6edde;  /* the letter's paper             */
-  --ink:        #3d3d3b;  /* the letter's writing           */
+  --ink:        #545454;  /* the letter's writing           */
   --ink-soft:   #8c877c;  /* the letter's scroll hint       */
   --white:      #ffffff;  /* headings                       */
   --ivory:      #ece5d9;  /* body text                      */
@@ -387,44 +387,67 @@ input, textarea { font: inherit; color: inherit; }
 }
 /* Sized against the paper, not the viewport: the paper is no longer the
    full screen, so a vw width would swell to a third of it on a desktop.
-   Rotated about the corner they hang from, not their own centre, so
-   changing a size or an angle does not also walk the piece off the edge. */
+   Each piece is pinned flush to its corner and then pushed off it by a
+   translate, which resolves against the piece's own box rather than the
+   paper's. That is the whole reason for the translate: a top/left percentage
+   would be measured against a paper that is nearly square on a desktop and
+   twice as tall as it is wide on a phone, so the same number that bleeds a
+   corner nicely on one would push it clean out of sight on the other.
+   Rotation is about each piece's own centre, so an angle and a position stay
+   independent and changing one does not force the other to be re-tuned.
+
+   Every one of them is cropped by an edge on purpose. A watercolour that
+   floats clear of the paper's border reads as a sticker; one that runs off
+   it reads as a printed card, and the four together read as a frame. */
 .fl-tl {
-  top: -2%;
-  left: -3%;
-  width: min(26%, 10rem);
+  top: 0;
+  left: 0;
+  width: min(30%, 11rem);
   aspect-ratio: 12 / 19;
   background-image: url("../assets/fl-sprig.webp");
-  transform-origin: top left;
-  transform: rotate(188deg) translate(-96%, -92%);
+  transform-origin: center;
+  /* Past upside down. The sprig is painted growing upward, and this corner
+     wants it entering from the top edge and cascading down-left, off the
+     side of the paper. Anything short of about 210deg cascades it down and
+     to the right instead, in toward the writing, which is the one direction
+     this corner must not send it. */
+  transform: translate(-24%, -13%) rotate(222deg);
 }
-/* The bloom sits at the top of this painting and the stem trails off the
-   bottom, so it hangs from the top edge rather than the corner: pulled any
-   further up and the flower head itself is what gets cropped. */
+/* The only mirrored piece. The stem trails to the left of its bloom in the
+   painting, which on this corner sends it inward across the writing; flipped,
+   it runs down the paper's right edge the way it does on the printed card.
+   The mirror is about the piece's own centre, not about the right edge: a
+   scaleX taken about the edge reflects the whole box across it and throws
+   the painting clean off the paper. */
 .fl-tr {
-  top: 1%;
+  top: 0;
   right: 0;
-  width: min(21%, 8rem);
+  width: min(26%, 9.5rem);
   aspect-ratio: 9.5 / 17;
   background-image: url("../assets/fl-stem.webp");
-  transform-origin: top right;
-  transform: rotate(-14deg);
+  transform-origin: center;
+  transform: translateY(5%) scaleX(-1) rotate(-10deg);
 }
+/* The one piece with no rotation. It is a bloom seen face on, so an angle
+   only makes it look tipped over; the corner does the framing instead. */
 .fl-bl {
-  bottom: -6%;
-  left: -8%;
-  width: min(33%, 12rem);
+  bottom: 0;
+  left: 0;
+  width: min(34%, 12.5rem);
   aspect-ratio: 15 / 14;
   background-image: url("../assets/fl-poppy.webp");
+  transform: translate(-35%, 39%);
 }
 .fl-br {
-  right: -2%;
-  bottom: -2%;
-  width: min(23%, 9rem);
+  right: 0;
+  bottom: 0;
+  width: min(26%, 9.5rem);
   aspect-ratio: 11 / 18;
   background-image: url("../assets/fl-sprig.webp");
-  transform-origin: bottom right;
-  transform: rotate(-40deg);
+  transform-origin: center;
+  /* Barely off vertical. Laid flatter it stops being a branch standing in
+     the corner and becomes a leaf lying across the foot of the letter. */
+  transform: translate(28%, 18%) rotate(-8deg);
 }
 
 .letter-inner {
@@ -566,10 +589,10 @@ input, textarea { font: inherit; color: inherit; }
 
   /* The paper shrinks faster than the type does, so at this size the corner
      pieces start crowding the title and the names. Frame, don't crowd. */
-  .fl-tl { width: min(20%, 6rem); }
-  .fl-tr { width: min(16%, 5rem); }
-  .fl-bl { width: min(26%, 8rem); }
-  .fl-br { width: min(18%, 6rem); }
+  .fl-tl { width: min(23%, 6.5rem); }
+  .fl-tr { width: min(20%, 5.75rem); }
+  .fl-bl { width: min(27%, 8.25rem); }
+  .fl-br { width: min(20%, 5.75rem); }
   .lang-switch { top: var(--space-2); right: var(--space-2); }
   .lang-switch button { padding: 0.25rem 0.5rem; font-size: 0.65rem; }
 }

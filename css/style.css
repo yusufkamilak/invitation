@@ -755,23 +755,48 @@ main { overflow-x: hidden; }
   margin-inline: auto;
   text-align: center;
 }
-/* Copenhagen's closing line, and only that one. .section-note is fine print,
-   which is right for the two notes that carry a caveat and wrong here: this
-   is the last thing said in a section written from top to bottom in large
-   cream prose, and at --step--1 in --forest-deep it read as a footnote to it
-   rather than as its last line.
-   Coming up to the prose voice is also the only way it is allowed to change
-   colour at all. --bone is 2.9:1 on the sage and legal from 1.15rem; nothing
-   in the palette clears AA below that but --forest-deep, which is the colour
-   it is leaving. Flat rather than the prose clamp, because it is one line
-   closing a section that has just been made smaller. */
-.travel-note {
-  font-family: var(--display);
-  font-size: 1.15rem;
-  line-height: 1.45;
-  color: var(--bone);
-  max-width: 46ch;
+/* Copenhagen's when and where, above its running order. Label and value on
+   one centred row each, in the same shape as the card's .meta-row: this is a
+   handful of facts to check rather than the section's prose, and setting it
+   as prose would compete with the flow directly below it.
+
+   Both halves stay in --forest-deep. --bone is 2.9:1 on the sage and only
+   legal from 1.15rem, and these rows are set at --step--1, so the display
+   face on the value is the whole of what tells it from its label. That is
+   also why these are not the card's own .meta-* classes: those belong to the
+   cream card, and a rule shared across two palettes is one edit away from
+   taking the wrong colour onto the sage. */
+.when-where {
+  margin: 0 auto var(--space-2);
+  /* Two columns rather than three centred rows. The labels are three very
+     different lengths, so centring each row on its own left the block
+     ragged down both edges; a shared spine is what makes three facts read
+     as a list instead of as three stray lines. auto columns keep the pair
+     as narrow as its longest label, and justify-content centres the pair
+     itself, so the block still sits on the section's axis. */
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-content: center;
+  column-gap: 0.6rem;
+  row-gap: 0.35rem;
 }
+.when-where dt {
+  text-align: right;
+  color: var(--forest-deep);
+  font-size: var(--step--1);
+}
+.when-where dd {
+  text-align: left;
+  font-family: var(--display);
+  color: var(--forest-deep);
+  font-size: var(--step--1);
+  margin: 0;
+}
+/* .section-note opens a gap above itself, which is right for a note closing a
+   section and wrong for this one: it belongs to the rows immediately above
+   it. The margin it would have had goes below instead, to stand the flow off
+   the block rather than the block off its own list. */
+.when-where-note { margin-top: 0; margin-bottom: var(--space-4); }
 
 /* ============================================================
    The card (the invitation itself)

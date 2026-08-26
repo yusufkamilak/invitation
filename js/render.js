@@ -90,7 +90,7 @@ window.WeddingRender = (function () {
       partnerA: d.couple.partnerA,
       partnerB: d.couple.partnerB,
       denmarkCity: hasDenmark ? d.denmark.city : "",
-      denmarkDate: hasDenmark ? (d.denmark.date ? fmtDate(d.denmark.date, lang) : c.card.tbc) : "",
+      denmarkDate: hasDenmark ? (d.denmark.date ? fmtDate(d.denmark.date, lang) : c.card.dateApprox) : "",
       spainCity: hasSpain ? d.spain.city : "",
       checkin: hasSpain ? fmtDate(d.spain.checkin, lang) : "",
       checkout: hasSpain ? fmtDate(d.spain.checkout, lang) : "",

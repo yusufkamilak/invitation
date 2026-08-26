@@ -9,7 +9,7 @@
 <title>An Invitation</title>
 <meta name="description" content="A private invitation.">
 <link rel="stylesheet" href="css/fonts-embedded.css?v=50cb9fbb">
-<link rel="stylesheet" href="css/style.css?v=7bff196d">
+<link rel="stylesheet" href="css/style.css?v=74ce219b">
 <link rel="icon" href="data:,">
 </head>
 <body>
@@ -143,8 +143,25 @@
       <section id="denmark" class="section flow-wide" hidden>
         <p class="kicker" data-bind="denmark.kicker"></p>
         <h2 class="section-title" data-bind="denmark.title"></h2>
+
+        <!-- When and where, before the running order. Every value here is
+             copy and not a fact out of details.json, which is the one place
+             this block differs from the card above it: the day is not fixed
+             yet, so the value is an approximate one that has to be written
+             in each language, and the two places are named with the city's
+             own spelling, which a single details.json field cannot carry.
+             Both labels repeat a step title from the flow below word for
+             word, so the block names nothing the section does not already.
+             It sits inside denmark, so CONTENT_PRUNE already keeps it away
+             from a guest who was not invited to this part. -->
+        <dl class="when-where">
+          <dt data-bind="denmark.where.dateLabel"></dt><dd data-bind="denmark.where.dateValue"></dd>
+          <dt data-bind="denmark.where.hallLabel"></dt><dd data-bind="denmark.where.hallValue"></dd>
+          <dt data-bind="denmark.where.dinnerLabel"></dt><dd data-bind="denmark.where.dinnerValue"></dd>
+        </dl>
+        <p class="section-note when-where-note" data-bind="denmark.where.note"></p>
+
         <ol class="flow" id="denmark-flow"><!-- populated by render.js --></ol>
-        <p class="section-note travel-note" data-bind="denmark.travelNote"></p>
       </section>
 
       <!-- Barcelona. A centred opening (where, when, how far from the
@@ -298,7 +315,7 @@
   </div>
 
   <script src="js/config.js?v=35b0850f" defer></script>
-  <script src="js/render.js?v=68e31551" defer></script>
+  <script src="js/render.js?v=452e6e13" defer></script>
   <script src="js/i18n.js?v=dbf828f0" defer></script>
   <script src="js/envelope.js?v=e0fccd62" defer></script>
   <script src="js/letter.js?v=9829543e" defer></script>

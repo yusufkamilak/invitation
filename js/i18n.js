@@ -1,7 +1,9 @@
 /*
- * i18n.js — the three-way language switcher. Persists the guest's choice
- * to localStorage so a reload keeps their pick; falls back to the
- * language baked into their invite link.
+ * i18n.js — the three-way language switcher. The pick is held in
+ * sessionStorage, so it survives a reload but dies with the tab: every
+ * fresh visit starts in the language baked into the guest's invite link,
+ * which is their own. One curious tap on EN should not follow them
+ * around for the next year.
  */
 window.WeddingI18n = (function () {
   "use strict";
@@ -11,10 +13,10 @@ window.WeddingI18n = (function () {
 
   function preferredLang(defaultLang) {
     try {
-      var saved = window.localStorage.getItem(STORAGE_KEY);
+      var saved = window.sessionStorage.getItem(STORAGE_KEY);
       if (saved && SUPPORTED.indexOf(saved) !== -1) return saved;
     } catch (err) {
-      /* localStorage unavailable (private mode etc.) — fall through */
+      /* sessionStorage unavailable (private mode etc.) — fall through */
     }
     return SUPPORTED.indexOf(defaultLang) !== -1 ? defaultLang : "en";
   }
@@ -34,7 +36,7 @@ window.WeddingI18n = (function () {
       if (!btn) return;
       var lang = btn.getAttribute("data-lang");
       try {
-        window.localStorage.setItem(STORAGE_KEY, lang);
+        window.sessionStorage.setItem(STORAGE_KEY, lang);
       } catch (err) {
         /* ignore */
       }

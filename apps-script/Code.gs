@@ -18,7 +18,7 @@
 
 var NOTIFY_EMAIL = "yusufkamilak@icloud.com";
 var SHEET_NAME = "Responses";
-var HEADERS = ["timestamp", "type", "name", "lang", "event", "attending", "dietary", "message"];
+var HEADERS = ["timestamp", "type", "name", "lang", "event", "attending", "dietary", "message", "activities"];
 
 function getSheet_() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -29,6 +29,12 @@ function getSheet_() {
   if (sheet.getLastRow() === 0) {
     sheet.appendRow(HEADERS);
     sheet.setFrozenRows(1);
+  }
+  // A sheet that already has rows in it never gets its header row written
+  // again, so a column added to HEADERS later would stay nameless. Widen
+  // it here instead. Idempotent, safe to run on every request.
+  if (sheet.getLastColumn() < HEADERS.length) {
+    sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
   }
   return sheet;
 }
@@ -63,11 +69,12 @@ function doPost(e) {
     var attending = String(data.attending || "").slice(0, 10);
     var dietary = String(data.dietary || "").slice(0, 500);
     var message = String(data.message || "").slice(0, 2000);
+    var activities = String(data.activities || "").slice(0, 2000);
 
     var sheet = getSheet_();
-    sheet.appendRow([new Date(), type, name, lang, event, attending, dietary, message]);
+    sheet.appendRow([new Date(), type, name, lang, event, attending, dietary, message, activities]);
 
-    sendNotification_(type, name, event, attending, dietary, message);
+    sendNotification_(type, name, event, attending, dietary, message, activities);
 
     return jsonResponse_({ ok: true });
   } catch (err) {
@@ -75,7 +82,7 @@ function doPost(e) {
   }
 }
 
-function sendNotification_(type, name, event, attending, dietary, message) {
+function sendNotification_(type, name, event, attending, dietary, message, activities) {
   var subject, body;
   if (type === "question") {
     subject = "Wedding site — question from " + name;
@@ -87,6 +94,7 @@ function sendNotification_(type, name, event, attending, dietary, message) {
       "\nEvent: " + event +
       "\nAttending: " + attending +
       "\nDietary: " + (dietary || "—") +
+      "\n\nWishes:\n" + (activities || "—") +
       "\n\nMessage:\n" + (message || "—");
   }
   try {

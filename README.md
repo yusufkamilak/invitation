@@ -159,7 +159,9 @@ name,lang,event,id,key
 Bilgehan,tr,s,,
 Anna,de,b,,
 ```
-`lang`: `en` / `tr` / `de` — their default, they can switch on the page.
+`lang`: `en` / `tr` / `de` — the language they see the site in. They can
+switch on the page, but that pick only lasts for the tab: every fresh visit
+starts from this column again.
 `event`: `s` Spain only, `d` Denmark only, `b` both.
 
 ## Photos

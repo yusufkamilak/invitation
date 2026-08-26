@@ -317,6 +317,7 @@ window.WeddingMain = (function () {
           event: bundle.guest.event,
           attending: attending,
           dietary: fd.get("dietary") || "",
+          activities: fd.get("activities") || "",
           message: fd.get("message") || "",
         });
         setStatus(status, "ok", c.rsvp.successBody);

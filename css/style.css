@@ -1398,6 +1398,143 @@ main { overflow-x: hidden; }
 .faq-item.is-open .faq-a { padding-bottom: var(--space-2); }
 
 /* ============================================================
+   The idea drawer — optional outings behind the plan
+
+   The FAQ's grammar on one centred row: display face, hairlines,
+   the + that turns into an x, so it needs no re-learning. Inside,
+   the site's one other horizontal scroller, with text panels where
+   #place has photographs. No dots: the cut-off card peeking at the
+   edge is the affordance, the same overhang the house strip leans
+   on before its dots exist.
+   ============================================================ */
+.ideas {
+  margin-top: var(--space-4);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.ideas[hidden] { display: none; }
+.ideas-toggle {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.6rem;
+  padding: var(--space-2) 0;
+  font-family: var(--display);
+  font-size: var(--step-0);
+  color: var(--forest-deep);
+}
+.ideas-toggle::after {
+  content: "+";
+  font-size: 1.15rem;
+  color: var(--forest);
+  transition: transform 0.25s var(--ease);
+  flex-shrink: 0;
+}
+.ideas.is-open .ideas-toggle::after { transform: rotate(45deg); }
+
+/* max-height is animated inline by bindIdeas() in js/main.js, like the
+   FAQ answers. visibility is the part the FAQ does not need: these
+   cards carry real links and the strip is a tab stop, and max-height
+   alone would leave them focusable while invisible. The delay hides
+   them only once the collapse has finished closing over them.
+   The negative margin and matching padding give the scroller room to
+   bleed to the section's edges before this box's own overflow clip
+   (which clips at the padding edge) cuts it, so a card is cut off by
+   the edge of the page and not by an invisible line mid-air. --space-3
+   is the same figure the carousel's own bleed uses. */
+.ideas-body {
+  max-height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  margin-inline: calc(-1 * var(--space-3));
+  padding-inline: var(--space-3);
+  transition: max-height 0.5s var(--ease), visibility 0s 0.5s;
+}
+.ideas.is-open .ideas-body {
+  visibility: visible;
+  transition: max-height 0.5s var(--ease), visibility 0s;
+}
+.ideas-note {
+  color: var(--forest-deep);
+  font-size: var(--step--1);
+  max-width: 44ch;
+  margin: var(--space-2) auto 0;
+  text-align: center;
+}
+
+/* The card variant of the carousel. The base .carousel rules give the
+   scroll-snap, the bleed and the Safari end-spacer; everything here is
+   what makes a slide a bordered text panel instead of a photograph. */
+.idea-cards { margin-block: var(--space-3); }
+.idea-cards li {
+  flex: 0 0 min(84%, 17rem);
+  aspect-ratio: auto;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-2);
+  background: var(--sage-lift);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+}
+.idea-kicker {
+  font-size: var(--step--1);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--forest-deep);
+  margin-bottom: 0.35rem;
+}
+.idea-title {
+  font-size: clamp(1.2rem, 1.08rem + 0.4vw, 1.45rem);
+  color: var(--forest);
+  line-height: 1.15;
+  margin-bottom: 0.3em;
+}
+/* On --sage-lift, like .panel-body: cream is 2.4:1 here and stays out. */
+.idea-body {
+  color: var(--forest-deep);
+  font-size: var(--step--1);
+  line-height: 1.55;
+}
+/* Pushed to the card's foot so the links line up across cards of
+   different lengths. */
+.idea-link {
+  margin-top: auto;
+  padding-top: var(--space-2);
+  align-self: start;
+  font-size: var(--step--1);
+  letter-spacing: 0.03em;
+  color: var(--forest-deep);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 0.2s var(--ease);
+}
+.idea-link:hover { color: var(--forest); }
+.idea-link::after {
+  content: "\2197";
+  margin-left: 0.3em;
+  display: inline-block;
+}
+
+/* The generic stagger rule up in Layout / sections would play these
+   cards' entrance while they are still shut inside the collapsed body,
+   to an audience of nobody. Hold them until the drawer opens, then run
+   the same stagger. Opacity and transform only, so the height bindIdeas
+   measured never moves. Needs no reduced-motion or no-IO handling of
+   its own: the global crusher flattens the transitions, and without an
+   observer initReveal has already handed out .is-visible. */
+.section.is-visible .idea-cards li {
+  opacity: 0;
+  transform: translateY(10px);
+  transition-delay: 0s;
+}
+.section.is-visible .ideas.is-open .idea-cards li {
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: calc(var(--i, 0) * 0.07s);
+}
+
+/* ============================================================
    Footer
    ============================================================ */
 .site-footer {

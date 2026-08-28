@@ -260,6 +260,27 @@ window.WeddingMain = (function () {
   }
 
   // ---------------------------------------------------------------
+  // The plan's idea drawer — the FAQ's mechanics on one static button.
+  // Re-run by renderPlanIdeas after every rebuild: the open state lives
+  // on the wrapper and survives a language switch, so all this has to do
+  // then is re-measure the new copy's height.
+  // ---------------------------------------------------------------
+  function bindIdeas() {
+    var wrap = document.getElementById("plan-ideas");
+    if (!wrap || wrap.hidden) return;
+    var btn = document.getElementById("ideas-toggle");
+    var body = document.getElementById("ideas-body");
+    body.style.maxHeight = wrap.classList.contains("is-open")
+      ? body.scrollHeight + "px"
+      : "0px";
+    btn.onclick = function () {
+      var isOpen = wrap.classList.toggle("is-open");
+      btn.setAttribute("aria-expanded", isOpen ? "true" : "false");
+      body.style.maxHeight = isOpen ? body.scrollHeight + "px" : "0px";
+    };
+  }
+
+  // ---------------------------------------------------------------
   // Forms
   // ---------------------------------------------------------------
   function setStatus(el, key, textFallback) {
@@ -375,9 +396,10 @@ window.WeddingMain = (function () {
     initCarousel();
     initCountdown();
     bindFaq();
+    bindIdeas();
     bindRsvpForm();
     bindQuestionForm();
   }
 
-  return { start: start, bindFaq: bindFaq };
+  return { start: start, bindFaq: bindFaq, bindIdeas: bindIdeas };
 })();

@@ -611,6 +611,54 @@ window.WeddingRender = (function () {
   function renderPlan(ctx, c) {
     if (!c.plan) return;
     renderFlow(document.getElementById("plan-flow"), c.plan.days || [], FLOWS.plan, ctx);
+    renderPlanIdeas(ctx, c);
+  }
+
+  // The idea cards behind the plan's toggle. The toggle and the collapsible
+  // wrapper are static markup that bindPass translates in place; only the
+  // cards are rebuilt here, so an open drawer stays open through a language
+  // switch. bindIdeas() in js/main.js then re-measures the drawer for the
+  // new copy's height, the same hand-off renderFaq makes to bindFaq.
+  function renderPlanIdeas(ctx, c) {
+    var wrap = document.getElementById("plan-ideas");
+    if (!wrap) return;
+    var items = (c.plan.ideas && c.plan.ideas.items) || [];
+    // A bundle built before this key existed gets no empty drawer.
+    wrap.hidden = items.length === 0;
+    if (!items.length) return;
+    var ul = document.getElementById("ideas-track");
+    ul.innerHTML = "";
+    items.forEach(function (item, i) {
+      var li = document.createElement("li");
+      li.style.setProperty("--i", i);
+      if (item.kicker) {
+        var kicker = document.createElement("p");
+        kicker.className = "idea-kicker";
+        kicker.textContent = t(item.kicker, ctx);
+        li.appendChild(kicker);
+      }
+      var title = document.createElement("h3");
+      title.className = "idea-title";
+      title.textContent = t(item.title, ctx);
+      li.appendChild(title);
+      var body = document.createElement("p");
+      body.className = "idea-body";
+      body.textContent = t(item.body, ctx);
+      li.appendChild(body);
+      // A link is optional per card, and only when the copy carries both
+      // halves: a bare href would render an unlabelled link.
+      if (item.linkHref && item.linkLabel) {
+        var link = document.createElement("a");
+        link.className = "idea-link";
+        link.href = item.linkHref;
+        link.target = "_blank";
+        link.rel = "noopener";
+        link.textContent = t(item.linkLabel, ctx);
+        li.appendChild(link);
+      }
+      ul.appendChild(li);
+    });
+    if (window.WeddingMain) window.WeddingMain.bindIdeas();
   }
 
   function renderPractical(ctx, c) {

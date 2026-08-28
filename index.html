@@ -9,7 +9,7 @@
 <title>An Invitation</title>
 <meta name="description" content="A private invitation.">
 <link rel="stylesheet" href="css/fonts-embedded.css?v=50cb9fbb">
-<link rel="stylesheet" href="css/style.css?v=74ce219b">
+<link rel="stylesheet" href="css/style.css?v=090701d7">
 <link rel="icon" href="data:,">
 </head>
 <body>
@@ -217,6 +217,28 @@
         <h2 class="section-title" data-bind="plan.subtitle"></h2>
         <p class="section-body plan-lead" data-bind="plan.lead"></p>
         <ol class="flow flow-tight" id="plan-flow"><!-- populated by render.js --></ol>
+
+        <!-- Optional outings for the free days, kept behind a toggle so
+             they read as an offer rather than a program. The toggle and
+             this wrapper are static and only the cards inside the ul are
+             rebuilt on a language switch, which is what lets an open
+             drawer stay open through one (renderPlanIdeas in js/render.js,
+             bindIdeas in js/main.js). Starts hidden: render.js unhides it
+             only when the bundle actually carries plan.ideas, so a bundle
+             built before the key existed shows nothing, not an empty
+             drawer. -->
+        <div class="ideas" id="plan-ideas" hidden>
+          <button type="button" class="ideas-toggle" id="ideas-toggle"
+                  aria-expanded="false" aria-controls="ideas-body">
+            <span data-bind-text="plan.ideas.toggleLabel"></span>
+          </button>
+          <div class="ideas-body" id="ideas-body" role="region"
+               data-bind-attr-aria-label="plan.ideas.toggleLabel">
+            <p class="ideas-note" data-bind="plan.ideas.note"></p>
+            <ul class="carousel idea-cards" id="ideas-track" role="group" tabindex="0"
+                data-bind-attr-aria-label="plan.ideas.carouselLabel"><!-- populated by render.js --></ul>
+          </div>
+        </div>
       </section>
 
       <section id="practical" class="section" hidden>
@@ -315,12 +337,12 @@
   </div>
 
   <script src="js/config.js?v=35b0850f" defer></script>
-  <script src="js/render.js?v=452e6e13" defer></script>
+  <script src="js/render.js?v=67092911" defer></script>
   <script src="js/i18n.js?v=dbf828f0" defer></script>
   <script src="js/envelope.js?v=e0fccd62" defer></script>
   <script src="js/letter.js?v=9829543e" defer></script>
   <script src="js/paging.js?v=846bc5ab" defer></script>
-  <script src="js/main.js?v=e0ac06dd" defer></script>
+  <script src="js/main.js?v=c643ef14" defer></script>
   <script src="js/unlock.js?v=4085fe4a" defer></script>
 </body>
 </html>

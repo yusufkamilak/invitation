@@ -272,6 +272,7 @@ window.WeddingMain = (function () {
   // on the wrapper and survives a language switch, so all this has to do
   // then is re-measure the new copy's height.
   // ---------------------------------------------------------------
+  var ideasResizeBound = false;
   function bindIdeas() {
     var wrap = document.getElementById("plan-ideas");
     if (!wrap || wrap.hidden) return;
@@ -285,6 +286,16 @@ window.WeddingMain = (function () {
       btn.setAttribute("aria-expanded", isOpen ? "true" : "false");
       body.style.maxHeight = isOpen ? body.scrollHeight + "px" : "0px";
     };
+    // The height is a measurement, and the drawer now starts open, so
+    // every guest is carrying one. A rotation rewraps the cards taller
+    // and the stale cap would clip them. Bound once, not per rebuild.
+    if (!ideasResizeBound) {
+      ideasResizeBound = true;
+      window.addEventListener("resize", function () {
+        if (!wrap.classList.contains("is-open")) return;
+        body.style.maxHeight = body.scrollHeight + "px";
+      });
+    }
   }
 
   // ---------------------------------------------------------------

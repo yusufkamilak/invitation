@@ -1495,6 +1495,11 @@ main { overflow-x: hidden; }
 .ideas.is-open .ideas-body {
   visibility: visible;
   transition: max-height 0.5s var(--ease), visibility 0s;
+  /* The drawer starts open, so it has to be open in the stylesheet too:
+     without this it would paint shut and then animate itself open once
+     bindIdeas() ran. "none" is not interpolable, so the inline pixel
+     height bindIdeas() writes over it snaps in rather than sliding. */
+  max-height: none;
 }
 .ideas-note {
   color: var(--forest-deep);

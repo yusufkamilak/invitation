@@ -14,7 +14,13 @@
      should: --cream is the letter's PAPER and --ink is its WRITING,
      so borrowing either name for the page's own cream or its dark
      green would repaint the letter and break the handoff. The page's
-     equivalents are --bone and --forest-deep, below. */
+     equivalents are --bone and --forest-deep, below.
+
+     The traffic does run the other way, in exactly two places. The
+     ground the letter's paper sits on is --sage, the same as the page
+     below it, so that scrolling off the letter crosses no edge; and
+     the scroll hint out on that ground is --forest-deep. The paper and
+     everything written on it are still the beige world's alone. */
   --beige:      #efe6d6;  /* envelope front paper                 */
   --beige-deep: #ddcfb6;  /* envelope inside / folds              */
   --beige-dim:  #c9b795;  /* envelope hairlines                   */
@@ -198,9 +204,32 @@ input, textarea { font: inherit; color: inherit; }
   background: radial-gradient(120% 90% at 50% 30%, #f6efe3 0%, var(--beige) 45%, #e2d5bd 100%);
 }
 
+/* The ground going green under the card as it turns. #letter's surround is
+   the sage the rest of the page is made of, and the hand-off is a hard swap
+   with nothing covering the surround, so the overlay has to have arrived at
+   that same sage before it is hidden. A background cannot be transitioned
+   from a gradient to a flat colour, hence a layer of its own.
+
+   0.25s + 0.6s lands at 850ms, inside the 1160ms hand-off with room to
+   spare, and while the card is still edge-on and holding the eye. */
+.envelope::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--sage);
+  opacity: 0;
+  transition: opacity 0.6s var(--ease) 0.25s;
+}
+.envelope.is-flipping::before { opacity: 1; }
+
 /* The measured growth. transform only, so it stays on the compositor:
    animating width/height here would relayout every frame. */
 .env-grow {
+  /* Positioned explicitly, and so is .env-hint below: both are otherwise
+     in normal flow, and the absolutely positioned ::before above would
+     paint over them. Not left to the stacking context will-change makes. */
+  position: relative;
+  z-index: 1;
   transition: transform 0.7s var(--ease);
   will-change: transform;
 }
@@ -330,6 +359,8 @@ input, textarea { font: inherit; color: inherit; }
 .envelope.is-flipping .env-seal { transform: scale(0.6); opacity: 0; }
 
 .env-hint {
+  position: relative;
+  z-index: 1;
   font-size: var(--step--1);
   letter-spacing: 0.22em;
   text-transform: uppercase;
@@ -348,11 +379,15 @@ input, textarea { font: inherit; color: inherit; }
 
    Two elements, and the split carries weight:
 
-     .letter        the stage. One screen, padded, and painted with
-                    the *same* beige gradient as the envelope overlay
-                    that sits above it, so the growing card lands on
-                    the ground it took off from and the hand-off is
-                    still invisible.
+     .letter        the stage. One screen, padded, and painted the
+                    page's own sage, so that scrolling off the letter
+                    is not a crossing from one world into another: the
+                    letter is the first screen of the green page, with
+                    a piece of paper laid on it. The envelope overlay
+                    above starts beige and fades to this same sage as
+                    the card turns, so the card still lands on the
+                    ground it took off from and the hand-off is still
+                    invisible. See .envelope::before.
      .letter-paper  the paper itself, and what js/envelope.js measures
                     and grows into. Inset on every side: a cream
                     rectangle bled to the viewport reads as a screen,
@@ -384,7 +419,10 @@ input, textarea { font: inherit; color: inherit; }
   align-items: center;
   justify-content: center;
   padding: var(--letter-pad-y) var(--letter-pad-x);
-  background: radial-gradient(120% 90% at 50% 30%, #f6efe3 0%, var(--beige) 45%, #e2d5bd 100%);
+  background: var(--sage);
+  /* Still --ink: it is inherited by the writing on the paper, which is
+     still cream. The one thing out here on the sage rather than on the
+     paper is .letter-hint, and it names its own colour. */
   color: var(--ink);
 }
 .letter:focus { outline: none; }
@@ -612,7 +650,10 @@ input, textarea { font: inherit; color: inherit; }
   font-size: var(--step--1);
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--ink-soft);
+  /* Not --ink-soft: that is a beige-world grey and it is #8c877c on a
+     #8c8f7b ground, which is no contrast at all. On the sage this is
+     ordinary small text and takes the colour the page gives small text. */
+  color: var(--forest-deep);
   cursor: pointer;
   opacity: 0;
   transition: opacity 0.8s var(--ease);

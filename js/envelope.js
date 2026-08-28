@@ -14,9 +14,14 @@
  * invisibly if the lower one is already fully painted, and a hard swap has
  * no such precondition.
  *
- * The overlay's own beige and the beige around .letter-paper are the same
- * gradient, so the surround does not have to be matched frame by frame: it
- * is already the same picture before and after the swap.
+ * The surround has to match at the swap too, and it no longer matches by
+ * standing still: the ground around .letter-paper is the page's sage, not
+ * the overlay's beige. So the overlay fades its own ground to that sage
+ * while the card turns, and is done well before the hand-off. Both layers
+ * are the same flat green by then, and the swap is invisible again. The
+ * fade is .envelope::before in style.css and is driven by .is-flipping,
+ * which is set below; nothing here has to time it beyond leaving it more
+ * room than it needs.
  *
  * The growth has to be measured in JS. .env-paper is sized
  * `min(84vw, 24rem)` with `max-height: 60svh` and `aspect-ratio: 3/2`, so

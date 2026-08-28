@@ -134,6 +134,13 @@ window.WeddingMain = (function () {
     // One photograph is not a carousel, and a row of one dot is furniture.
     if (slides.length < 2) return;
 
+    // The read-out is rebuilt, not added to. Nothing should call this
+    // twice: js/envelope.js hands over once, and start() runs once off the
+    // back of it. But appending was the one way this could go wrong
+    // silently, and it did. A doubled hand-off left eight dots under four
+    // photographs, two of them marked current.
+    dots.innerHTML = "";
+
     var buttons = slides.map(function (slide, i) {
       var b = document.createElement("button");
       b.type = "button";

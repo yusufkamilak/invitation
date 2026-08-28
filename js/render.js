@@ -389,6 +389,12 @@ window.WeddingRender = (function () {
   // makes the page longer rather than making it wrong.
   var FLOWS = {
     denmark: [
+      // Opens the section, above the first step rather than beside a later
+      // one: it is the room the day starts in, so it is the establishing
+      // shot and the other two are details from further down the day. On a
+      // phone that reading order is the whole of the placement; at the
+      // breakpoint side-right puts it in the band alongside the step.
+      { kind: "photo", photo: "denmarkHall", side: "right", id: "denmark-photo-3" },
       { kind: "step",  step: 0, side: "left" },
       { kind: "link",  shape: "a" },
       { kind: "photo", photo: "denmarkCar", side: "left", id: "denmark-photo" },

@@ -1641,14 +1641,18 @@ main { overflow-x: hidden; }
    layout, which is enough — this is the quieter of the two sections by
    arrangement rather than by shrinking prose that cannot legally shrink. */
 .flow-tight .flow-body { max-width: 32ch; }
-/* Five days into two columns leaves one over. It goes under both, in the
-   middle, rather than sitting alone in the left column looking abandoned. */
-.flow-tight .flow-step.side-center { text-align: center; }
-.flow-tight .flow-step.side-center .flow-body { margin-inline: auto; }
-/* Centred under the title above it, not flush with the grid below. The
-   lead answers "What we have in mind" and belongs to it; the days are a
-   set and keep their own left edges, which is the same two alignments
-   Copenhagen has. Everything but the measure comes from .section-body. */
+/* Both alignments below are settings of the two-column grid, so both are
+   stated inside the breakpoint blocks rather than out here. The centring
+   used to sit at this level unqualified, which put it into effect on a
+   phone as well: there the days are one full-width column and the only
+   thing it did was centre the fifth while the four above it stayed flush
+   left, for no reason a reader could see. */
+/* Centred under the title above it. The lead answers "What we have in
+   mind" and belongs to it rather than to the grid below, which is why it
+   is centred at both sizes while the days are only centred on a phone:
+   there they are a single column and fall in under it, and at the
+   breakpoint they become two and take their own left edges back.
+   Everything but the measure comes from .section-body. */
 .plan-lead {
   font-size: clamp(1.15rem, 1.1rem + 0.25vw, 1.25rem);
   max-width: 46ch;
@@ -1661,6 +1665,13 @@ main { overflow-x: hidden; }
   background-position: center;
   border: 1px solid var(--line-firm);
 }
+/* The ceremony room, and the one photograph here that is a room rather
+   than a detail. It is a wide interior and the frame is most of what it
+   says, so it keeps the camera's own 3:2 at both sizes instead of being
+   cropped to the shared 4:3 here and to a square at the breakpoint.
+   Cover would take that crop off the sides, which is where the vault and
+   the painted wall are. */
+#denmark-photo-3 { aspect-ratio: 3 / 2; }
 
 .flow-link { color: var(--squiggle); }
 .flow-link svg {
@@ -1722,6 +1733,17 @@ main { overflow-x: hidden; }
   .link-wide { display: none; }
   .link-tall { display: block; }
   .flow-link { width: 3.25rem; justify-self: center; }
+  /* The plan's days, centred as a set. The two columns are gone here and
+     each day is a short block in a wide one, so left edges no longer line
+     anything up: they just sit the text against a rule that isn't drawn.
+     Centred, the five of them share an axis with the lead above them and
+     the section reads as one column rather than five stray paragraphs.
+     The measure is untouched: .flow-tight .flow-body still caps at 32ch,
+     and the auto margins only move that box to the middle of the column.
+     Copenhagen keeps its left edges: it has photographs to sit beside and
+     is .flow without .flow-tight, so none of this reaches it. */
+  .flow-tight .flow-step { text-align: center; }
+  .flow-tight .flow-body { margin-inline: auto; }
 }
 
 @media (min-width: 52rem) {
@@ -1734,6 +1756,13 @@ main { overflow-x: hidden; }
   .flow-tight .flow-step.side-left   { grid-column: 1 / span 6; }
   .flow-tight .flow-step.side-right  { grid-column: 7 / span 6; }
   .flow-tight .flow-step.side-center { grid-column: 4 / span 6; }
+  /* Five days into two columns leaves one over. It goes under both, in the
+     middle, rather than sitting alone in the left column looking abandoned,
+     and centring its text is what makes that placement read as deliberate.
+     Only here: below the breakpoint every day is centred and this one has
+     nothing to be the exception to. */
+  .flow-tight .flow-step.side-center { text-align: center; }
+  .flow-tight .flow-step.side-center .flow-body { margin-inline: auto; }
   /* The row spans are what put a photograph beside the steps it belongs
      to rather than under them: the car sits alongside Reception, the
      connector and Until Dinner (three rows), the table alongside Dinner
@@ -1747,6 +1776,25 @@ main { overflow-x: hidden; }
      text beside it, and the slack came out as a hole between Dinner and The
      day after. */
   .flow-photo.side-right { grid-column: 8 / span 5; grid-row: span 2; aspect-ratio: 1 / 1; }
+  /* Keeps the right band and gives back the row span: it opens the section
+     beside a single step, so one row is all it has to cover. Taking two
+     would put it across the row the shape-a connector needs. That stroke
+     spans columns 5-10 and this photograph sits in 8-12, so they overlap,
+     grid would push the connector down a row, and the tuned arrangement
+     below it would follow.
+
+     The pinned row is what puts Nikah beside it rather than under it, and
+     it is not decoration. Auto-placement is sparse: the photograph is the
+     first item in the flow, so placing it in columns 8-12 leaves the
+     cursor past column 12, and the step behind it asks for columns 1-7,
+     which is behind the cursor. Rather than go back, grid moves to the
+     next row and the two end up stacked with a hole beside each. A
+     definite row takes the photograph out of auto-placement altogether:
+     it is positioned before the cursor starts, and the step then finds
+     row 1 free and sits in it. Safe when the photograph is absent from a
+     guest's bundle: renderFlow() simply never emits it, and row 1 is the
+     step's. */
+  #denmark-photo-3 { grid-row: 1; aspect-ratio: 3 / 2; }
 
   /* Each stroke has to leave the step above it and arrive at the step
      below it, or it is not a link, it is a doodle. Two things decide that,

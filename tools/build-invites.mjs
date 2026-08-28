@@ -108,7 +108,7 @@ const CONTENT_PRUNE = {
 
 // keys removed from content/details.json the same way.
 const DETAILS_PRUNE = {
-  s: ["denmark", "photos.denmarkCar", "photos.denmarkTable"],
+  s: ["denmark", "photos.denmarkHall", "photos.denmarkCar", "photos.denmarkTable"],
   d: ["spain", "airbnb", "paypal", "photos.map", "photos.house"],
   b: [],
 };
@@ -134,6 +134,7 @@ const LEAK_CHECK = {
   s: (details) => [
     details.denmark?.city,
     ...(CITY_ALIASES[details.denmark?.city] || []),
+    details.photos?.denmarkHall,
     details.photos?.denmarkCar,
     details.photos?.denmarkTable,
   ].filter(Boolean),

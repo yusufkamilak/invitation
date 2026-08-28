@@ -38,6 +38,20 @@ window.WeddingEnvelope = (function () {
   // jump 2px smaller at the swap, against an edge the guest can see.
   var BLEED = 0;
 
+  // The hand-off is one-way and happens once, and this is what holds that.
+  // Four paths reach handOver(): missing markup, reduced motion, the grow
+  // timeout, and the resize below. The last two are not exclusive. The
+  // resize listener is only unbound from inside itself, so on the ordinary
+  // path it outlives the move it exists to rescue and stays armed for the
+  // life of the page; on a phone the first scroll collapses the URL bar,
+  // which is a resize, which handed over a second time and ran the whole
+  // of WeddingMain.start() again. That showed up as a second row of
+  // carousel dots, and cost more than it showed: a second set of
+  // observers, a second scroll lock, and a second submit listener on the
+  // RSVP form, which is one tap sending two RSVPs. Module scope rather
+  // than show()'s, so it covers the early bail above the closure too.
+  var landed = false;
+
   function prefersReducedMotion() {
     return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   }
@@ -112,8 +126,21 @@ window.WeddingEnvelope = (function () {
         }, GROW_START_MS)
       );
 
+      // A rotate part way through invalidates the measurement above, and
+      // there is no honest way to re-target mid-flight. Land immediately.
+      function onResize() {
+        window.removeEventListener("resize", onResize);
+        timers.forEach(window.clearTimeout);
+        handOver(el, onOpen);
+      }
+      window.addEventListener("resize", onResize);
+
       timers.push(
         window.setTimeout(function () {
+          // Taken off here as well as inside itself. Only the flight needs
+          // rescuing, and past this point the listener has nothing left to
+          // do but fire on the next URL bar collapse.
+          window.removeEventListener("resize", onResize);
           // One frame, no fade: by now the overlay is a cream rectangle
           // exactly over the cream letter.
           window.requestAnimationFrame(function () {
@@ -121,14 +148,6 @@ window.WeddingEnvelope = (function () {
           });
         }, GROW_START_MS + GROW_MS)
       );
-
-      // A rotate part way through invalidates the measurement above, and
-      // there is no honest way to re-target mid-flight. Land immediately.
-      window.addEventListener("resize", function onResize() {
-        window.removeEventListener("resize", onResize);
-        timers.forEach(window.clearTimeout);
-        handOver(el, onOpen);
-      });
     }
 
     // The whole overlay is the target, not just the paper, so a slightly
@@ -150,6 +169,8 @@ window.WeddingEnvelope = (function () {
   // modality releases it and snaps to the card. A letter too tall to fit
   // the screen is never locked at all; see js/paging.js.
   function handOver(el, onOpen) {
+    if (landed) return;
+    landed = true;
     if (el) el.hidden = true;
     document.documentElement.classList.remove("is-sealed");
     document.body.classList.remove("is-sealed");

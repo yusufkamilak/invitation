@@ -43,6 +43,47 @@ Every guest sees the card, the RSVP section and the FAQ. What differs:
 | `d` Denmark only | `denmark` | `place`, `plan`, `practical`; `details.spain`, `details.airbnb`, `details.paypal`, `details.photos.map`, `details.photos.house` |
 | `b` both | all four | nothing, a both-guest's bundle is unpruned |
 
+## Covering a guest's share
+
+`event` says which parts a guest is invited to. The `covered` column says
+whether we are paying for them. Set it to `yes` and the Practical section
+stops asking for money:
+
+| | shown | NOT present in the decrypted bundle |
+|---|---|---|
+| `covered` blank | the amount, the per-night line, the PayPal button and QR | the `practicalCovered` copy |
+| `covered` `yes` | the `practicalCovered` copy in its place | `details.paypal`, `details.spain.costPerPerson`, and `practical.perNight` / `paypalLabel` / `paypalNote` / `travelNote` |
+
+`practicalCovered` sits beside `practical` in each of `en/tr/de.json` and
+holds only the keys that differ, so `bringList`, `weatherNote` and the rest
+cannot drift between a paying guest and a covered one. `applyCovered()`
+overlays it, then deletes it. It deletes it for **everyone**, covered or
+not, and that one line is what keeps "this part is on us" out of a paying
+guest's bundle.
+
+That is a second axis of leakage, and the event prune cannot see it: it is
+not Spain content reaching a Denmark guest, it is one guest's arrangement
+reaching another. `checkCovered()` is what makes it a build failure. It
+asserts, on the exact plaintext about to be encrypted, that no bundle has a
+surviving `practicalCovered`, that a covered guest carries no PayPal link
+and no `costPerPerson`, and that a paying guest's plaintext contains none of
+the covered copy. Both halves are worth keeping: comment out the delete and
+the first assertion fires; merge the overlay for the wrong guest and the
+second one does.
+
+Write the covered copy in all three languages or the build fails on
+purpose. The bundle carries every language and the switcher works offline,
+so a missing translation would show a covered guest the paying copy the
+moment they tap EN.
+
+On the page side nothing knows the word "covered". `applyEventScope()`
+removes the amount, the per-night line, the pay row and the fineprint when
+`details.paypal` is absent, which is the same "presence of content is the
+only test" rule the section loop above it uses. `buildCtx()` guards the
+`cost` and `costPerNight` tokens on `costPerPerson != null` rather than on
+`details.spain`, because a covered guest keeps the Spain block and loses
+only the figure; without that guard `Intl` formats it as "NaN €".
+
 The letter on the first screen is the one thing every guest gets
 identically, whatever they were invited to. That is only safe because it
 names no place and no date, and the build enforces it: the letter may only
@@ -127,8 +168,11 @@ scale, that trade is no longer the same one.
    - `content/details.json` — facts: dates, Airbnb, PayPal link, names, and
      `photos` (paths under `assets/` for the two photo insets, see "Photos"
      below).
-   - `tools/guests.csv` — the guest list (`name,lang,event,id,key` — leave
-     `id`/`key` blank for new guests, the build script fills them in).
+   - `tools/guests.csv` — the guest list
+     (`name,lang,event,covered,id,key` — leave `id`/`key` blank for new
+     guests, the build script fills them in; leave `covered` blank unless
+     you are paying that guest's share, see "Covering a guest's share"
+     above).
 2. Run:
    ```
    npm install        # first time only

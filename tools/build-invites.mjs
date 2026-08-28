@@ -15,13 +15,15 @@
  *   node tools/build-invites.mjs
  *
  * guests.csv format (header row required), values may NOT contain commas:
- *   name,lang,event,id,key
- *   Bilgehan,tr,s,,
- *   Anna,de,b,,
+ *   name,lang,event,covered,id,key
+ *   Bilgehan,tr,s,,,
+ *   Anna,de,b,,,
  *
- *   lang  = en | tr | de     (guest's default language; they can switch)
- *   event = s (Spain only) | d (Denmark only) | b (both)
- *   id/key are auto-filled on first run — leave blank for new guests.
+ *   lang    = en | tr | de   (guest's default language; they can switch)
+ *   event   = s (Spain only) | d (Denmark only) | b (both)
+ *   covered = blank | yes    (yes = we are paying their share; see
+ *                             applyCovered below for what that removes)
+ *   id/key are auto-filled on first run, leave blank for new guests.
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
@@ -181,6 +183,86 @@ function checkLetter(content, name) {
   }
 }
 
+// ---- per-guest "this one is on us" variant ----
+// A guest whose share we are covering must not be shown an amount, a
+// PayPal button or a QR, and must not be asked to cover their own stay.
+// That is two things at once: copy, swapped for the practicalCovered
+// block authored beside practical in each language file, and facts,
+// deleted exactly the way the event prune deletes them.
+//
+// The swap is an overlay, not a second whole section. practicalCovered
+// carries only the keys that differ, so bringList, weatherNote and the
+// rest cannot drift between a paying guest and a covered one.
+//
+// practicalCovered is deleted for *everyone*, covered or not. That one
+// delete is what keeps "this part is on us" out of a paying guest's
+// bundle, and it guards a leak the event prune above cannot see: not
+// Spain content reaching a Denmark guest, but one guest's arrangement
+// reaching another. checkCovered() below is what turns it into a build
+// failure rather than a convention.
+const COVERED_DROP = ["perNight", "paypalLabel", "paypalNote", "travelNote"];
+const COVERED_DETAILS_DROP = ["paypal", "spain.costPerPerson"];
+
+function applyCovered(content, details, covered, name) {
+  for (const lang of Object.keys(content)) {
+    const c = content[lang];
+    if (covered && c.practical) {
+      if (!c.practicalCovered) {
+        fail(
+          `Guest "${name}" is covered, but content/${lang}.json has no practicalCovered block. ` +
+            `Write it in all three languages: the bundle carries every language and the ` +
+            `switcher works offline, so a missing one shows them the paying copy.`
+        );
+      }
+      Object.assign(c.practical, c.practicalCovered);
+      for (const key of COVERED_DROP) delete c.practical[key];
+    }
+    delete c.practicalCovered;
+  }
+  if (covered) for (const p of COVERED_DETAILS_DROP) deletePath(details, p);
+}
+
+// The covered copy itself, pulled from the *original* content, to be used
+// as needles against every paying guest's plaintext.
+function coveredNeedles(contentByLang) {
+  const out = [];
+  for (const lang of Object.keys(contentByLang)) {
+    const v = contentByLang[lang].practicalCovered;
+    if (v && v.costBody) out.push(v.costBody);
+  }
+  return out;
+}
+
+function checkCovered(bundle, covered, name, needles, details) {
+  for (const lang of Object.keys(bundle.content)) {
+    if (bundle.content[lang].practicalCovered) {
+      fail(`Guest "${name}": practicalCovered survived into the bundle for ${lang}.`);
+    }
+  }
+  const plain = JSON.stringify(bundle);
+  if (covered) {
+    // Structural, not a search for "225". The note on airportMinutes above
+    // says why a short numeric needle is a bad idea, and the same applies
+    // here. The PayPal URL is long enough to be worth matching literally.
+    if (bundle.details.paypal) fail(`Guest "${name}" is covered but still carries details.paypal.`);
+    if (bundle.details.spain && bundle.details.spain.costPerPerson != null) {
+      fail(`Guest "${name}" is covered but still carries details.spain.costPerPerson.`);
+    }
+    if (details.paypal?.link && plain.includes(details.paypal.link)) {
+      fail(`Guest "${name}" is covered but the PayPal link is still somewhere in their bundle.`);
+    }
+  } else {
+    for (const needle of needles) {
+      if (plain.includes(needle)) {
+        fail(
+          `Guest "${name}" is not covered, but their bundle contains the covered copy ` +
+            `("${needle.slice(0, 40)}..."). They would read that someone else is not paying.`
+        );
+      }
+    }
+  }
+}
+
 function pruneForEvent(contentByLang, details, event) {
   const content = JSON.parse(JSON.stringify(contentByLang));
   const prunedDetails = JSON.parse(JSON.stringify(details));
@@ -197,8 +279,8 @@ if (!existsSync(D_DIR)) mkdirSync(D_DIR, { recursive: true });
 if (!existsSync(GUESTS_CSV)) {
   writeFileSync(
     GUESTS_CSV,
-    "name,lang,event,id,key\n" +
-      "Example Guest,en,s,,\n"
+    "name,lang,event,covered,id,key\n" +
+      "Example Guest,en,s,,,\n"
   );
   console.log(`→ Created ${GUESTS_CSV} with a placeholder row. Edit it, then re-run.`);
   process.exit(0);
@@ -220,6 +302,7 @@ for (const lang of ["en", "tr", "de"]) {
   contentByLang[lang] = readJSON(path.join(CONTENT_DIR, `${lang}.json`), `content/${lang}.json`);
 }
 const details = readJSON(path.join(CONTENT_DIR, "details.json"), "content/details.json");
+const COVERED_NEEDLES = coveredNeedles(contentByLang);
 
 const { rows } = parseCSV(readFileSync(GUESTS_CSV, "utf8"));
 if (rows.length === 0) fail("guests.csv has no guest rows.");
@@ -233,10 +316,15 @@ for (const row of rows) {
   const name = row.name?.trim();
   const lang = (row.lang || "en").trim().toLowerCase();
   const event = (row.event || "b").trim().toLowerCase();
+  const covered = (row.covered || "").trim().toLowerCase();
 
   if (!name) continue;
   if (!["en", "tr", "de"].includes(lang)) fail(`Guest "${name}": lang must be en/tr/de, got "${lang}"`);
   if (!["s", "d", "b"].includes(event)) fail(`Guest "${name}": event must be s/d/b, got "${event}"`);
+  if (!["", "yes"].includes(covered)) fail(`Guest "${name}": covered must be blank or "yes", got "${covered}"`);
+  if (covered === "yes" && event === "d") {
+    fail(`Guest "${name}": covered="yes" means nothing with event "d". There is no Practical section to cover.`);
+  }
 
   let id = row.id?.trim();
   let key = row.key?.trim();
@@ -253,6 +341,7 @@ for (const row of rows) {
   if (keyBytes.length !== 32) fail(`Guest "${name}": stored key is not 32 bytes — delete its id/key cells and re-run.`);
 
   const pruned = pruneForEvent(contentByLang, details, event);
+  applyCovered(pruned.content, pruned.details, covered === "yes", name);
 
   const bundle = {
     guest: { name, lang, event },
@@ -266,6 +355,7 @@ for (const row of rows) {
   // Checked against the *original* (unpruned) details — checking the pruned
   // copy would trivially always pass, since pruning already deleted the facts.
   checkLetter(pruned.content, name);
+  checkCovered(bundle, covered === "yes", name, COVERED_NEEDLES, details);
 
   const plainCheck = JSON.stringify(bundle);
   for (const needle of LEAK_CHECK[event](details)) {
@@ -286,7 +376,7 @@ for (const row of rows) {
   writeFileSync(path.join(D_DIR, `${id}.bin`), out);
   refreshed++;
 
-  outRows.push({ name, lang, event, id, key });
+  outRows.push({ name, lang, event, covered, id, key });
   links.push({
     name,
     event,
@@ -295,7 +385,7 @@ for (const row of rows) {
   });
 }
 
-writeFileSync(GUESTS_CSV, toCSV(["name", "lang", "event", "id", "key"], outRows));
+writeFileSync(GUESTS_CSV, toCSV(["name", "lang", "event", "covered", "id", "key"], outRows));
 writeFileSync(LINKS_CSV, toCSV(["name", "event", "lang", "url"], links));
 
 console.log(`✓ Wrote ${refreshed} bundle(s) to d/ (${created} new).`);

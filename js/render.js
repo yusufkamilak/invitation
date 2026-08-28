@@ -84,6 +84,7 @@ window.WeddingRender = (function () {
     var c = bundle.content[lang];
     var hasSpain = !!d.spain;
     var hasDenmark = !!d.denmark;
+    var hasCost = hasSpain && d.spain.costPerPerson != null;
     var nights = hasSpain ? nightsBetween(d.spain.checkin, d.spain.checkout) : null;
     return {
       name: bundle.guest.name,
@@ -99,8 +100,11 @@ window.WeddingRender = (function () {
       // three copy files, not in details.json.
       airportMinutes: hasSpain && d.spain.airportMinutes != null ? d.spain.airportMinutes : "",
       nights: nights != null ? nights : "",
-      cost: hasSpain ? fmtCost(d.spain.costPerPerson, d.spain.currency, lang) : "",
-      costPerNight: hasSpain && nights ? fmtCost(Math.round(d.spain.costPerPerson / nights), d.spain.currency, lang) : "",
+      // A covered guest keeps details.spain but loses costPerPerson, so
+      // hasSpain alone is not enough to ask Intl to format it: it would
+      // render the amount as "NaN €" rather than as nothing.
+      cost: hasCost ? fmtCost(d.spain.costPerPerson, d.spain.currency, lang) : "",
+      costPerNight: hasCost && nights ? fmtCost(Math.round(d.spain.costPerPerson / nights), d.spain.currency, lang) : "",
     };
   }
 
@@ -666,7 +670,8 @@ window.WeddingRender = (function () {
     var d = bundle.details;
     setText(document.getElementById("cost-amount"), ctx.cost);
     if (d.paypal) document.getElementById("paypal-link").href = d.paypal.link;
-    document.getElementById("qr-wrap").innerHTML = (d.paypal && d.paypal.qrSvg) || "";
+    var qr = document.getElementById("qr-wrap");
+    if (qr) qr.innerHTML = (d.paypal && d.paypal.qrSvg) || "";
 
     var list = document.getElementById("bring-list");
     list.innerHTML = "";
@@ -725,6 +730,24 @@ window.WeddingRender = (function () {
       if (c[contentKey]) section.hidden = false;
       else section.remove();
     });
+
+    // Same rule one level in. A guest whose share we're covering keeps the
+    // Practical section but has no details.paypal and no amount, so the
+    // money furniture would paint as three empty paragraphs and a button
+    // still pointing at href="#". Presence of the fact is the only test
+    // here too, so nothing needs to know why it's missing.
+    if (!bundle.details.paypal) {
+      [
+        "#cost-amount",
+        "#practical .cost-pernight",
+        "#practical .pay-row",
+        "#practical .fineprint",
+        "#practical .section-note",
+      ].forEach(function (sel) {
+        var el = document.querySelector(sel);
+        if (el) el.remove();
+      });
+    }
 
     // The scroll cue points at whatever section actually follows the card.
     var next = document.querySelector("#card ~ .section, main .section:not(#card)");
